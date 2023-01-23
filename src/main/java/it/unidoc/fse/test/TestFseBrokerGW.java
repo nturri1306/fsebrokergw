@@ -149,11 +149,9 @@ public class TestFseBrokerGW {
 
         assertTrue(validationResponse.getStatusCode().value() == 200 || validationResponse.getStatusCode().value() == 201);
 
-
         var validationTrans = gwStatusService.getWorkflowInstanceId(validationResponse.getBody().getWorkflowInstanceId());
 
         assertTrue(validationTrans.getStatusCode().value() == 200 || validationTrans.getStatusCode().value() == 201);
-
 
 
        var healthData = getHealthDataPublish(validationResponse.getBody().getWorkflowInstanceId(),identificativoDoc);
