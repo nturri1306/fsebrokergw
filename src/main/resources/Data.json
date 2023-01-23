@@ -1,0 +1,16 @@
+{
+  "sub": "PROVAX00X00X000Y",
+  "subject_role": "AAS",
+  "purpose_of_use": "TREATMENT",
+  "iss": "jwt-issuer",
+  "locality": "jwt-location",
+  "subject_organization_id": "120",
+  "subject_organization": "csa",
+  "aud": "FSE_Gateway",
+  "patient_consent": true,
+  "action_id": "CREATE",
+  "resource_hl7_type": "('11502-2^^2.16.840.1.113883.6.1')",
+  "jti": "1234",
+  "person_id":"RSSMRA22A01A399Z^^^&amp;2.16.840.1.113883.2.9.4.3.2&amp;ISO",
+  "p12_path": "c:/logs/cert.p12"
+}
