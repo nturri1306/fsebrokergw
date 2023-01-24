@@ -1,16 +1,18 @@
 package it.unidoc.fse.fsebrokergw.data.response;
 
 
-public class DocumentErrorResponse  extends  DocumentBaseResponse {
+/**
+ * @author n.turri
+ */
+
+public class DocumentErrorResponse extends DocumentBaseResponse {
     private String traceID;
     private String spanID;
-
     private String type;
     private String title;
     private String detail;
     private int status;
     private String instance;
-
 
 
     public String getTraceID() {
@@ -28,8 +30,6 @@ public class DocumentErrorResponse  extends  DocumentBaseResponse {
     public void setSpanID(String spanID) {
         this.spanID = spanID;
     }
-
-
 
 
     public String getType() {

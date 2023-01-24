@@ -9,16 +9,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 
+/**
+ * @author n.turri
+ */
 public class GWBaseService {
 
     private String bearerToken;
 
     private String hashSignature;
 
-    public String _urlService = "https://modipa-val.fse.salute.gov.it/govway/rest/in/FSE/gateway";
-
     public String urlService = "http://127.0.0.1:9010";
-
     List<MediaType> mediaTypes = new ArrayList<>();
 
 

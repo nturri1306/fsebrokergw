@@ -1,6 +1,10 @@
 package it.unidoc.fse.fsebrokergw.data.response;
 
-public class DocumentSuccessResponse extends  DocumentBaseResponse {
+
+/**
+ * @author n.turri
+ */
+public class DocumentSuccessResponse extends DocumentBaseResponse {
 
     private String traceID;
 

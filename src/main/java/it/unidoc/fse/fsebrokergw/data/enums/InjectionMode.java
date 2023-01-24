@@ -1,5 +1,9 @@
 package it.unidoc.fse.fsebrokergw.data.enums;
 
+
+/**
+ * @author n.turri
+ */
 public enum InjectionMode {
     A("ATTACHMENT", "CDA iniettato nel PDF come allegato (EmbeddedFiles)"),
     R("RESOURCE", "CDA iniettato nel PDF come risorsa (XFAResources)");

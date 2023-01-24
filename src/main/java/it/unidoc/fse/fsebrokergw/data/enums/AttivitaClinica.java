@@ -1,5 +1,9 @@
 package it.unidoc.fse.fsebrokergw.data.enums;
 
+
+/**
+ * @author n.turri
+ */
 public enum AttivitaClinica {
     PHR("Personal Health Record Update", "Documenti trasmessi direttamente dal paziente mediante il taccuino personale."),
     CON("Consulto", "Documenti trasmessi per richiedere un consulto."),

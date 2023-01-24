@@ -1,5 +1,9 @@
 package it.unidoc.fse.fsebrokergw.data;
 
+
+/**
+ * @author n.turri
+ */
 public class DocumentStatus {
 
     private String status;
@@ -11,6 +15,5 @@ public class DocumentStatus {
     public void setStatus(String status) {
         this.status = status;
     }
-
 
 }

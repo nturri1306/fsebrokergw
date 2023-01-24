@@ -1,5 +1,9 @@
 package it.unidoc.fse.fsebrokergw.data.enums;
 
+
+/**
+ * @author n.turri
+ */
 public enum HealthDataFormat {
     C("CDA", "Clinical Document Architecture");
 

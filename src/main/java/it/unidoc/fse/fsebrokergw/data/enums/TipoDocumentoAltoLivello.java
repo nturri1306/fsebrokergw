@@ -1,5 +1,10 @@
 package it.unidoc.fse.fsebrokergw.data.enums;
 
+
+/**
+ * @author n.turri
+ */
+
 public enum TipoDocumentoAltoLivello {
     WOR("Documento di workflow", "Questa classe di documenti deve essere utilizzata per i documenti di workflow."),
     REF("Referto", "Questa classe di documenti deve essere utilizzata per ogni tipologia di referto."),

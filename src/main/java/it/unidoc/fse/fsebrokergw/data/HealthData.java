@@ -1,5 +1,10 @@
 package it.unidoc.fse.fsebrokergw.data;
 
+
+/**
+ * @author n.turri
+ */
+
 public class HealthData {
     private String healthDataFormat;
     private String mode;

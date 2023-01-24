@@ -15,15 +15,17 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 
-
 import java.io.File;
 
 
-public class GWValidationService extends  GWBaseService {
+/**
+ * @author n.turri
+ */
+public class GWValidationService extends GWBaseService {
 
-     // /v1/documents/validation
+   private  String urlValidation ="/v1/documents/validation";
 
-    public ResponseEntity<DocumentSuccessResponse>  validation(String fileName, HealthData healthData, MediaType mediaType) {
+    public ResponseEntity<DocumentSuccessResponse> validation(String fileName, HealthData healthData, MediaType mediaType) {
         try {
 
             Gson gson = new Gson();
@@ -32,11 +34,11 @@ public class GWValidationService extends  GWBaseService {
             RestTemplate restTemplate = new RestTemplate();
 
             HttpHeaders headers = new HttpHeaders();
-           // headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-            headers.setContentType(mediaType);
 
+            headers.setContentType(mediaType);
+            //headers.add("Authorization","Bearer: "+ getBearerToken());
             headers.add("FSE-JWT-Signature", getHashSignature());
-            headers.add("Accept","application/json");
+            headers.add("Accept", "application/json");
 
             MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();
             map.add("requestBody", requestBody.toString());
@@ -44,7 +46,7 @@ public class GWValidationService extends  GWBaseService {
 
             HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(map, headers);
 
-            ResponseEntity<DocumentSuccessResponse> response = restTemplate.postForEntity(urlService+"/v1/documents/validation", request, DocumentSuccessResponse.class);
+            ResponseEntity<DocumentSuccessResponse> response = restTemplate.postForEntity(urlService + urlValidation, request, DocumentSuccessResponse.class);
 
 
             return response;
@@ -53,7 +55,7 @@ public class GWValidationService extends  GWBaseService {
         } catch (Exception e) {
             e.printStackTrace();
 
-            return  null;
+            return null;
         }
 
     }

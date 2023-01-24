@@ -1,5 +1,10 @@
 package it.unidoc.fse.fsebrokergw.data.enums;
 
+
+/**
+ * @author n.turri
+ */
+
 public enum ActivityType {
     CREATE("CREATE", "Il valore deve essere utilizzato per il servizio di validazione e per il servizio di Pubblicazione Creazione Documento"),
     DELETE("DELETE", "Il valore deve essere utilizzato per il servizio di Eliminazione Documento"),

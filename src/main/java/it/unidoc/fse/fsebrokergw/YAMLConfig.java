@@ -6,6 +6,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 
+/**
+ * @author n.turri
+ */
+
 @Configuration
 @EnableConfigurationProperties
 @ConfigurationProperties

@@ -1,5 +1,9 @@
 package it.unidoc.fse.fsebrokergw.data.enums;
 
+
+/**
+ * @author n.turri
+ */
 public enum ValidationType {
     V("VERIFICA", "Attività di validazione"),
     P("VALIDATION", "Attività di validazione finalizzata alla pubblicazione");

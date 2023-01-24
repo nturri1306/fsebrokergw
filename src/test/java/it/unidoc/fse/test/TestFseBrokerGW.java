@@ -28,6 +28,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
+/**
+ * @author n.turri
+ */
 @SpringBootTest
 @RunWith(SpringRunner.class)
 @ContextConfiguration(classes = YAMLConfig.class)
@@ -53,8 +56,6 @@ public class TestFseBrokerGW {
 
             pathPdf = executionPath + "/src/test/resources/files/pdf";
 
-
-
             String urlService = yamlConfig.getGWURLSERVICE();
 
             gwStatusService = new GWStatusService();
@@ -66,31 +67,30 @@ public class TestFseBrokerGW {
             gwPublishService = new GWPublishService();
             gwPublishService.setUrlService(urlService);
 
-//            properties.load(new FileInputStream(executionPath + "/src/main/resources/application.properties"));
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-
     }
 
     private TransactionData getWorkFlowIntanceId(String workFlowIntanceId) throws JsonProcessingException {
         var transResponse = gwStatusService.getWorkflowInstanceId(workFlowIntanceId);
-
         assertTrue(transResponse.getStatusCode().value() == 200 || transResponse.getStatusCode().value() == 201);
-
         TransactionData transactionData = transResponse.getBody();
-
         System.out.println(new ObjectMapper().writeValueAsString(transactionData));
+        return transactionData;
+    }
 
+    private TransactionData getStatusTraceId(String traceId) throws JsonProcessingException {
+        var transResponse = gwStatusService.getStatusTraceId(traceId);
+        assertTrue(transResponse.getStatusCode().value() == 200 || transResponse.getStatusCode().value() == 201);
+        TransactionData transactionData = transResponse.getBody();
+        System.out.println(new ObjectMapper().writeValueAsString(transactionData));
         return transactionData;
     }
 
     @Test
     public void status() {
-
         assertEquals(gwStatusService.getStatus().getStatusCode().value(), 200);
-
     }
 
     @Test
@@ -100,14 +100,34 @@ public class TestFseBrokerGW {
         gwValidationService.setHashSignature(yamlConfig.getJWT_CERT_VACC_WITH_HASH_PAYLOAD());
         String pdfFile = pathPdf + File.separator + yamlConfig.getPDF_CERT_VACC();
 
-        var response = gwValidationService.validation(pdfFile, getHealthDataValidation(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
-
+        var response = gwValidationService.validation(pdfFile, getHealthDataValidationAttachment(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
 
         assertTrue(response.getStatusCode().value() == 200 || response.getStatusCode().value() == 201);
 
         var transactionData = getWorkFlowIntanceId(response.getBody().getWorkflowInstanceId());
 
         assertTrue(transactionData.getTransactionData().size() > 0);
+
+        transactionData =  getStatusTraceId(response.getBody().getTraceID());
+
+        assertTrue(transactionData.getTransactionData().size() > 0);
+    }
+
+    @Test
+    public void validationResource_CERT_VACC() throws JsonProcessingException {
+
+        gwValidationService.setBearerToken(yamlConfig.getJWT_CERT_VACC_PAYLOAD());
+        gwValidationService.setHashSignature(yamlConfig.getJWT_CERT_VACC_WITH_HASH_PAYLOAD());
+        String pdfFile = "C:\\fse2\\output.pdf";
+
+        var response = gwValidationService.validation(pdfFile, getHealthDataValidationResource(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
+
+        assertTrue(response.getStatusCode().value() == 200 || response.getStatusCode().value() == 201);
+
+        var transactionData = getWorkFlowIntanceId(response.getBody().getWorkflowInstanceId());
+
+        assertTrue(transactionData.getTransactionData().size() > 0);
+
 
 
     }
@@ -121,15 +141,13 @@ public class TestFseBrokerGW {
 
         String pdfFile = pathPdf + File.separator + yamlConfig.getPDF_LAB();
 
-        var response = gwValidationService.validation(pdfFile, getHealthDataValidation(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
+        var response = gwValidationService.validation(pdfFile, getHealthDataValidationAttachment(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
 
         assertTrue(response.getStatusCode().value() == 200 || response.getStatusCode().value() == 201);
 
         var transactionData = getWorkFlowIntanceId(response.getBody().getWorkflowInstanceId());
 
         assertTrue(transactionData.getTransactionData().size() > 0);
-
-
     }
 
     @Test
@@ -139,14 +157,13 @@ public class TestFseBrokerGW {
         gwValidationService.setHashSignature(yamlConfig.getJWT_RAD_WITH_HASH_PAYLOAD());
         String pdfFile = pathPdf + File.separator + yamlConfig.getPDF_RAD();
 
-        var response = gwValidationService.validation(pdfFile, getHealthDataValidation(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
+        var response = gwValidationService.validation(pdfFile, getHealthDataValidationAttachment(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
 
         assertTrue(response.getStatusCode().value() == 200 || response.getStatusCode().value() == 201);
 
         var transactionData = getWorkFlowIntanceId(response.getBody().getWorkflowInstanceId());
 
         assertTrue(transactionData.getTransactionData().size() > 0);
-
     }
 
     @Test
@@ -162,7 +179,7 @@ public class TestFseBrokerGW {
 
         String identificativoDoc = "2.16.840.1.113883.2.9.2.120.4.4^2" + getRandom();
 
-        var validationResponse = gwValidationService.validation(pdfFile, getHealthDataValidation(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
+        var validationResponse = gwValidationService.validation(pdfFile, getHealthDataValidationAttachment(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
 
         assertTrue(validationResponse.getStatusCode().value() == 200 || validationResponse.getStatusCode().value() == 201);
 
@@ -185,7 +202,6 @@ public class TestFseBrokerGW {
 
         lastIdentificativoDoc = identificativoDoc;
 
-
     }
 
     @Test
@@ -201,7 +217,7 @@ public class TestFseBrokerGW {
         String pdfFile = pathPdf + File.separator + yamlConfig.getPDF_CERT_VACC();
         String identificativoDoc = lastIdentificativoDoc;
 
-        var validationResponse = gwValidationService.validation(pdfFile, getHealthDataValidation(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
+        var validationResponse = gwValidationService.validation(pdfFile, getHealthDataValidationAttachment(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
 
         assertTrue(validationResponse.getStatusCode().value() == 200 || validationResponse.getStatusCode().value() == 201);
 
@@ -215,8 +231,6 @@ public class TestFseBrokerGW {
         var updateResponse = gwPublishService.updateDocument(identificativoDoc, pdfFile, healthData, org.springframework.http.MediaType.MULTIPART_FORM_DATA);
 
         assertTrue(updateResponse.getStatusCode().value() == 200 || updateResponse.getStatusCode().value() == 201);
-
-
     }
 
     @Test
@@ -253,12 +267,18 @@ public class TestFseBrokerGW {
 
     }
 
-    public HealthData getHealthDataValidation() {
+    public HealthData getHealthDataValidationAttachment() {
         HealthData healthDataValidation = new HealthData();
         healthDataValidation.setActivity(ValidationType.P.getCode());
         healthDataValidation.setHealthDataFormat(HealthDataFormat.C.getCode());
         healthDataValidation.setMode(InjectionMode.A.getCode());
 
+        return healthDataValidation;
+    }
+
+    public HealthData getHealthDataValidationResource() {
+        HealthData healthDataValidation = getHealthDataValidationAttachment();
+        healthDataValidation.setMode(InjectionMode.R.getCode());
         return healthDataValidation;
     }
 

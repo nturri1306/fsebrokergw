@@ -1,5 +1,9 @@
 package it.unidoc.fse.fsebrokergw.data.enums;
 
+
+/**
+ * @author n.turri
+ */
 public enum HealthcareFacilityTypeCode {
     Ospedale("Ospedale", "Indica che il documento è stato prodotto in regime di ricovero ospedaliero del paziente."),
     Prevenzione("Prevenzione", "Indica che il documento è stato prodotto a seguito di uno screening o di medicina preventiva."),

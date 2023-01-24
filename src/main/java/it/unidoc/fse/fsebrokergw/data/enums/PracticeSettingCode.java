@@ -1,5 +1,11 @@
 package it.unidoc.fse.fsebrokergw.data.enums;
 
+
+
+/**
+ * @author n.turri
+ */
+
 public enum PracticeSettingCode {
 
     AD_PSC001("Allergologia"),

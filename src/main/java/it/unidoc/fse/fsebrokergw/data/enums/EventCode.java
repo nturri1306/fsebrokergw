@@ -1,5 +1,10 @@
 package it.unidoc.fse.fsebrokergw.data.enums;
 
+
+/**
+ * @author n.turri
+ */
+
 public enum EventCode {
 
     EventCode_P99("P99","Oscuramento del documento", "Specifica che un assistito ha stabilito di oscurare un documento a tutti i ruoli abilitati all’accesso al FSE."),

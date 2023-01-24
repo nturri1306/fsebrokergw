@@ -1,5 +1,10 @@
 package it.unidoc.fse.fsebrokergw.data.enums;
 
+
+
+/**
+ * @author n.turri
+ */
 public enum Organizzazione {
     ORG_010("010", "Regione Piemonte"),
     ORG_020("020", "Regione Valle d'Aosta"),

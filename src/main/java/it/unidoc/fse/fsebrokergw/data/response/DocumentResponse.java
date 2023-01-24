@@ -1,6 +1,10 @@
 package it.unidoc.fse.fsebrokergw.data.response;
 
 
+
+/**
+ * @author n.turri
+ */
 public class DocumentResponse extends DocumentBaseResponse {
 
     private String eventType;
@@ -12,7 +16,6 @@ public class DocumentResponse extends DocumentBaseResponse {
     private String expiringDate;
     private String identificativoDocumento;
     private String tipoAttivita;
-
 
 
     public String getIdentificativoDocumento() {

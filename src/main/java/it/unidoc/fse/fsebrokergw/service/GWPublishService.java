@@ -2,7 +2,6 @@ package it.unidoc.fse.fsebrokergw.service;
 
 
 import com.google.gson.Gson;
-import it.unidoc.fse.fsebrokergw.data.response.DocumentResponse;
 import it.unidoc.fse.fsebrokergw.data.HealthDataComplete;
 import it.unidoc.fse.fsebrokergw.data.response.DocumentSuccessResponse;
 import org.springframework.core.io.FileSystemResource;
@@ -14,9 +13,13 @@ import org.springframework.web.client.RestTemplate;
 import java.io.File;
 
 
+/**
+ * @author n.turri
+ */
+
 public class GWPublishService extends GWBaseService {
 
-    // /v1/documents/
+    private  String urlValidation ="/v1/documents";
 
     public ResponseEntity<DocumentSuccessResponse> publish(String fileName, HealthDataComplete healthData, MediaType mediaType) {
         try {
@@ -28,7 +31,7 @@ public class GWPublishService extends GWBaseService {
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(mediaType);
-
+            //headers.add("Authorization","Bearer: "+ getBearerToken());
             headers.add("FSE-JWT-Signature", getHashSignature());
             headers.add("Accept", "application/json");
 
@@ -39,7 +42,7 @@ public class GWPublishService extends GWBaseService {
 
             HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(map, headers);
 
-            ResponseEntity<DocumentSuccessResponse> response = restTemplate.postForEntity(urlService + "/v1/documents", request, DocumentSuccessResponse.class);
+            ResponseEntity<DocumentSuccessResponse> response = restTemplate.postForEntity(urlService + urlValidation, request, DocumentSuccessResponse.class);
 
 
             return response;
@@ -58,12 +61,13 @@ public class GWPublishService extends GWBaseService {
         RestTemplate restTemplate = new RestTemplate();
 
         HttpHeaders headers = new HttpHeaders();
+        //headers.add("Authorization","Bearer: "+ getBearerToken());
         headers.add("FSE-JWT-Signature", getHashSignature());
         headers.set("accept", "application/json");
 
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
-        ResponseEntity<String> response = restTemplate.exchange(urlService + "/v1/documents/" + documentId, HttpMethod.DELETE, request, String.class);
+        ResponseEntity<String> response = restTemplate.exchange(urlService + urlValidation + documentId, HttpMethod.DELETE, request, String.class);
 
         return response;
     }
@@ -75,6 +79,7 @@ public class GWPublishService extends GWBaseService {
 
 
         HttpHeaders headers = new HttpHeaders();
+        //headers.add("Authorization","Bearer: "+ getBearerToken());
         headers.add("FSE-JWT-Signature", getHashSignature());
         headers.set("accept", "application/json");
 
@@ -84,7 +89,7 @@ public class GWPublishService extends GWBaseService {
         parts.add("requestBody", healthData);
         parts.add("file", new FileSystemResource(fileName));
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(parts, headers);
-        ResponseEntity<String> response = restTemplate.exchange(urlService + "/v1/documents/" + documentId, HttpMethod.PUT, requestEntity, String.class);
+        ResponseEntity<String> response = restTemplate.exchange(urlService + urlValidation + documentId, HttpMethod.PUT, requestEntity, String.class);
 
         return response;
 

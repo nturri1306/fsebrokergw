@@ -1,5 +1,9 @@
 package it.unidoc.fse.fsebrokergw.data.enums;
 
+
+/**
+ * @author n.turri
+ */
 public enum Ruolo {
     AAS("Personale di assistenza ad alta specializzazione", "Medico / Dirigente sanitario"),
     APR("Medico Medicina Generale / Pediatra di Libera Scelta", "Medico Medicina Generale / Pediatra di Libera Scelta"),

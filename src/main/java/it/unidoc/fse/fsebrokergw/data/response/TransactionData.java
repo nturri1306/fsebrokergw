@@ -3,7 +3,12 @@ package it.unidoc.fse.fsebrokergw.data.response;
 
 import java.util.ArrayList;
 
-public class TransactionData  {
+
+/**
+ * @author n.turri
+ */
+
+public class TransactionData {
 
     private String traceID;
     private String spanID;
@@ -25,7 +30,6 @@ public class TransactionData  {
     public void setSpanID(String spanID) {
         this.spanID = spanID;
     }
-
 
 
     public ArrayList<DocumentResponse> getTransactionData() {

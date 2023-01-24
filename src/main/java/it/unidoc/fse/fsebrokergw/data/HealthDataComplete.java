@@ -2,6 +2,10 @@ package it.unidoc.fse.fsebrokergw.data;
 
 import java.util.List;
 
+
+/**
+ * @author n.turri
+ */
 public class HealthDataComplete {
 
     private List<String> attiCliniciRegoleAccesso;
