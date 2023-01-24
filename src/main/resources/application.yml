@@ -1,0 +1,7 @@
+server:
+  port: '9000'
+  application:
+    name: fsebrokergw
+gw:
+  url:
+    service: 'http://127.0.0.1:9010'
