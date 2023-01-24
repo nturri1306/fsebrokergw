@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Validatore CDA</title>
+</head>
+<body>
+<form action="/validate-cda" method="post">
+
+    <label for="cdaFile">Select a file:</label>
+    <input type="file" id="cdaFile" name="cdaFile"><br><br>
+  <input type="submit" value="Invia">
+</form>
+<label id="validation-result"></label>
+<script>
+        // Gestisce la risposta del server
+        function handleResponse(response) {
+            var label = document.getElementById("validation-result");
+            label.innerHTML = response;
+        }
+    </script>
+</body>
+</html>

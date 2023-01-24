@@ -47,7 +47,14 @@
             <artifactId>gson</artifactId>
             <version>2.9.0</version>
         </dependency>
-    </dependencies>
+        <dependency>
+            <groupId>dom4j</groupId>
+            <artifactId>dom4j</artifactId>
+            <version>1.1</version>
+        </dependency>
+
+
+	</dependencies>
 
 	<build>
 		<plugins>
