@@ -1,8 +1,7 @@
 var searchData=
 [
-  ['getting_20started_0',['Getting Started',['../md__h_e_l_p.html',1,'']]],
-  ['gwbaseservice_1',['GWBaseService',['../classit_1_1unidoc_1_1fse_1_1fsebrokergw_1_1service_1_1_g_w_base_service.html',1,'it::unidoc::fse::fsebrokergw::service']]],
-  ['gwpublishservice_2',['GWPublishService',['../classit_1_1unidoc_1_1fse_1_1fsebrokergw_1_1service_1_1_g_w_publish_service.html',1,'it::unidoc::fse::fsebrokergw::service']]],
-  ['gwstatusservice_3',['GWStatusService',['../classit_1_1unidoc_1_1fse_1_1fsebrokergw_1_1service_1_1_g_w_status_service.html',1,'it::unidoc::fse::fsebrokergw::service']]],
-  ['gwvalidationservice_4',['GWValidationService',['../classit_1_1unidoc_1_1fse_1_1fsebrokergw_1_1service_1_1_g_w_validation_service.html',1,'it::unidoc::fse::fsebrokergw::service']]]
+  ['healthcarefacilitytypecode_0',['HealthcareFacilityTypeCode',['../enumit_1_1unidoc_1_1fse_1_1fsebrokergw_1_1data_1_1enums_1_1_healthcare_facility_type_code.html',1,'it::unidoc::fse::fsebrokergw::data::enums']]],
+  ['healthdata_1',['HealthData',['../classit_1_1unidoc_1_1fse_1_1fsebrokergw_1_1data_1_1_health_data.html',1,'it::unidoc::fse::fsebrokergw::data']]],
+  ['healthdatacomplete_2',['HealthDataComplete',['../classit_1_1unidoc_1_1fse_1_1fsebrokergw_1_1data_1_1_health_data_complete.html',1,'it::unidoc::fse::fsebrokergw::data']]],
+  ['healthdataformat_3',['HealthDataFormat',['../enumit_1_1unidoc_1_1fse_1_1fsebrokergw_1_1data_1_1enums_1_1_health_data_format.html',1,'it::unidoc::fse::fsebrokergw::data::enums']]]
 ];
