@@ -51,7 +51,9 @@ public class TestFseBrokerGW {
         try {
             String executionPath = System.getProperty("user.dir");
 
-            pathPdf = executionPath + "/src/test/resources";
+            pathPdf = executionPath + "/src/test/resources/files/pdf";
+
+
 
             String urlService = yamlConfig.getGWURLSERVICE();
 
@@ -134,7 +136,7 @@ public class TestFseBrokerGW {
     public void validationAttachment_RAD() throws JsonProcessingException {
 
         gwValidationService.setBearerToken(yamlConfig.getJWT_RAD_PAYLOAD());
-        gwValidationService.setHashSignature(yamlConfig.getJWT_LAB_WITH_HASH_PAYLOAD());
+        gwValidationService.setHashSignature(yamlConfig.getJWT_RAD_WITH_HASH_PAYLOAD());
         String pdfFile = pathPdf + File.separator + yamlConfig.getPDF_RAD();
 
         var response = gwValidationService.validation(pdfFile, getHealthDataValidation(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
