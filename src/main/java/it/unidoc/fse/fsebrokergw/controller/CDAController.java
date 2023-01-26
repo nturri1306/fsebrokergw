@@ -51,7 +51,7 @@ public class CDAController {
 
 
         try (ByteArrayInputStream bytes = new ByteArrayInputStream(schematron)) {
-            IReadableResource readableResource = new ReadableResourceInputStream("schematron_certificato_VACC v1.3.sch", bytes);
+            IReadableResource readableResource = new ReadableResourceInputStream(files[0].getAbsoluteFile().getName(), bytes);
             SchematronResourceSCH schematronResource = new SchematronResourceSCH(readableResource);
 
             SchematronValidationResultDTO resultDTO = CDAHelper.validateXMLViaSchematronFull(schematronResource, cdaFile.getBytes());
@@ -60,6 +60,8 @@ public class CDAController {
 
                 for (var ass : resultDTO.getFailedAssertions()) {
                     result.append(ass.getText() + "\r\n");
+                    result.append("----> "+ ass.getTest() + "\r\n");
+
 
                 }
             } else {
