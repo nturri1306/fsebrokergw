@@ -1,49 +1,86 @@
 package it.unidoc.fse.fsebrokergw.controller;
 
-import org.dom4j.Document;
-import org.dom4j.io.SAXReader;
+import com.helger.commons.io.resource.IReadableResource;
+import com.helger.commons.io.resource.inmemory.ReadableResourceInputStream;
 
+import com.helger.schematron.xslt.SchematronResourceSCH;
+import it.finanze.sanita.fse2.ms.gtw.validator.dto.SchematronValidationResultDTO;
+
+import it.it.finanze.sanita.fse2.ms.gtw.validator.cda.CDAHelper;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
-import org.xml.sax.SAXException;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+
+/**
+ * @author n.turri
+ */
 
 @Controller
 public class CDAController {
 
 
     @PostMapping("/validate-cda")
-    public @ResponseBody String validateCDA(@RequestParam("cdaFile") MultipartFile cdaFile, Model model) {
+    public @ResponseBody String validateCDA(@RequestParam("cdaFile") MultipartFile cdaFile,
+                                            @RequestParam("comboValue") String comboValue) throws IOException {
 
-       /* try {
-            // Crea un oggetto SAXReader per leggere il file XML
-            SAXReader reader = new SAXReader();
 
-            // Legge il file CDA caricato
-            Document document = reader.read(cdaFile.getInputStream());
+        StringBuffer result = new StringBuffer();
 
-            // Crea un oggetto SchematronValidator per eseguire la validazione
-            SchematronValidator validator = new SchematronValidator();
+        String executionPath = System.getProperty("user.dir");
 
-            // Esegue la validazione utilizzando lo schema Schematron specificato
-            SchematronOutput output = validator.validate(document, "schema.sch");
+        var schemaValue = SchemaMap.getSchemaMap().get(comboValue);
 
-            // Verifica se la validazione è stata eseguita con successo
-            if (output.isValid()) {
-                model.addAttribute("message", "Il file CDA è valido");
+        File folder = new File(executionPath + "/src/test/resources/files" + File.separator + schemaValue + File.separator + "schV3");
+
+        File[] files = folder.listFiles();
+
+        Path path = Paths.get(files[0].getAbsoluteFile().getPath());
+
+        byte[] schematron = Files.readAllBytes(path);
+
+
+        try (ByteArrayInputStream bytes = new ByteArrayInputStream(schematron)) {
+            IReadableResource readableResource = new ReadableResourceInputStream("schematron_certificato_VACC v1.3.sch", bytes);
+            SchematronResourceSCH schematronResource = new SchematronResourceSCH(readableResource);
+
+            SchematronValidationResultDTO resultDTO = CDAHelper.validateXMLViaSchematronFull(schematronResource, cdaFile.getBytes());
+
+            if (resultDTO.getFailedAssertions().size() > 0) {
+
+                for (var ass : resultDTO.getFailedAssertions()) {
+                    result.append(ass.getText() + "\r\n");
+
+                }
             } else {
-                model.addAttribute("message", "Il file CDA non è valido");
+                if (resultDTO.getValidSchematron()) {
+                    result.append("cda valido");
+                } else if (resultDTO.getValidXML()) {
+                    result.append("cda valido");
+                }
+
+                return result.toString();
             }
+
+
+        } catch (IOException e) {
+            return e.getMessage();
         } catch (Exception e) {
-            model.addAttribute("message", "Errore durante la validazione: " + e.getMessage());
-        }*/
+            return e.getMessage();
+        }
+
 
         // Restituisce la vista per mostrare il messaggio di risposta
-        return "cda-response";
+        return result.toString();
     }
 }

@@ -45,24 +45,6 @@
 			<scope>runtime</scope>
 		</dependency>
 
-		<!-- OPENAPI-UI -->
-		<dependency>
-			<groupId>org.springdoc</groupId>
-			<artifactId>springdoc-openapi-ui</artifactId>
-			<version>1.6.11</version>
-		</dependency>
-
-		<!-- LOGBACK JSON -->
-		<dependency>
-			<groupId>ch.qos.logback.contrib</groupId>
-			<artifactId>logback-json-classic</artifactId>
-			<version>0.1.5</version>
-		</dependency>
-		<dependency>
-			<groupId>ch.qos.logback.contrib</groupId>
-			<artifactId>logback-jackson</artifactId>
-			<version>0.1.5</version>
-		</dependency>
 
 		<!-- DEVTOOL -->
 		<dependency>
@@ -82,11 +64,7 @@
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
 
-		<!-- KAFKA -->
-		<dependency>
-			<groupId>org.springframework.kafka</groupId>
-			<artifactId>spring-kafka</artifactId>
-		</dependency>
+
 
 		<!-- TEST -->
 		<dependency>
@@ -95,20 +73,11 @@
 			<scope>test</scope>
 		</dependency>
 
-		<!-- MONGODB -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-mongodb</artifactId>
-		</dependency>
-
 		<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-pool2 -->
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-pool2</artifactId>
 		</dependency>
-
-
-
 
 		<!-- JSOUP -->
 		<dependency>
@@ -165,22 +134,13 @@
 			<scope>test</scope>
 		</dependency>
 
-
-
-		<!-- SCHEMATRON -->
 		<dependency>
-			<groupId>com.helger</groupId>
-			<artifactId>ph-schematron</artifactId>
-			<version>5.6.5</version>
+			<groupId>commons-lang</groupId>
+			<artifactId>commons-lang</artifactId>
+			<version>2.6</version>
 		</dependency>
 
 
-        <dependency>
-            <groupId>org.mongodb</groupId>
-            <artifactId>bson</artifactId>
-            <version>4.6.1</version>
-            <scope>test</scope>
-        </dependency>
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-lang3</artifactId>

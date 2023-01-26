@@ -1,20 +1,74 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Valida CDA</title>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <title>Valida CDA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.1/dist/jquery.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+
+    #response-message {
+    white-space: pre-line;
+    }
+    #loading-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-top: -50px; /* metà dell'altezza */
+    margin-left: -50px; /* metà della larghezza */
+  }
+
+h1 {
+   text-align: center;
+}
+
+
+
+    </style>
+
+
 </head>
 <body>
 <h1>Valida un file CDA</h1>
 <form id="cda-form" enctype="multipart/form-data">
-  <label for="cdaFile">Seleziona un file CDA:</label>
-  <input type="file" id="cdaFile" name="cdaFile" required>
-  <input type="button" value="Valida" onclick="validateCDA()">
+    <label for="cdaFile">Seleziona un file CDA:</label>
+    <input type="file" id="cdaFile" name="cdaFile" required>
+    <label for="combo">Tipologia di CDA:</label>
+    <select id="combo"></select>
+    &nbsp;&nbsp;&nbsp;
+    <input type="button" value="Valida" onclick="validateCDA()">
 </form>
-<label id="response-message"></label>
+<br>
+<br>
+
+<div id="loading-spinner">
+    <div class="spinner-border"></div>
+
+</div>
+
+<div id="response-message"></div>
+
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-      function validateCDA() {
-        var formData = new FormData($("#cda-form")[0]);
+
+const loadingSpinner = document.getElementById("loading-spinner");
+
+function validateCDA() {
+
+document.getElementById("response-message").innerHTML='';
+
+loadingSpinner.style.display = "block";
+
+
+    var file = $("#cdaFile")[0].files[0];
+    var comboValue = $("#combo").val();
+    var formData = new FormData();
+    formData.append("cdaFile", file);
+    formData.append("comboValue", comboValue);
 
         $.ajax({
           url: '/validate-cda',
@@ -23,13 +77,35 @@
           contentType: false,
           processData: false,
           success: function(response) {
+
             $("#response-message").text(response);
+
+             loadingSpinner.style.display = "none";
+
           },
           error: function() {
             $("#response-message").text("Errore durante la validazione");
+
+             loadingSpinner.style.display = "none";
           }
         });
       }
-    </script>
+
+
+      $.get("/comboValues", function(values) {
+        // Popola il tag select con i valori della combo
+        $("#combo").empty();
+        $.each(values, function(i, value) {
+            $("#combo").append($("<option>").val(value).text(value));
+        });
+      });
+
+
+ loadingSpinner.style.display = "none";
+
+
+
+
+</script>
 </body>
 </html>
