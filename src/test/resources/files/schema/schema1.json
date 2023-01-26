@@ -1,0 +1,17 @@
+{
+	"name_schema": "CDA.xsd",
+	"content_schema": {
+		"$binary": {
+			"base64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+DQo8IS0tIEVkaXRlZCBieSBDLiBCZWViZSB1c2luZyBOb3RlcGFkKysgb24gMjAxNSAwOSAwOSAtLT4NCjx4czpzY2hlbWEgdGFyZ2V0TmFtZXNwYWNlPSJ1cm46aGw3LW9yZzp2MyIgeG1sbnM6eHM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hIiB4bWxucz0idXJuOmhsNy1vcmc6djMiIHhtbG5zOm1pZj0idXJuOmhsNy1vcmc6djMvbWlmIiBlbGVtZW50Rm9ybURlZmF1bHQ9InF1YWxpZmllZCI+DQoJPHhzOmluY2x1ZGUgc2NoZW1hTG9jYXRpb249Ii4vY29yZXNjaGVtYXMvUE9DRF9NVDAwMDA0MFVWMDIueHNkIi8+DQoJPHhzOmVsZW1lbnQgbmFtZT0iQ2xpbmljYWxEb2N1bWVudCIgdHlwZT0iUE9DRF9NVDAwMDA0MFVWMDIuQ2xpbmljYWxEb2N1bWVudCIvPg0KPC94czpzY2hlbWE+DQo=",
+			"subType": "00"
+		}
+	},
+	"type_id_extension": "1.3",
+	"root_schema": true,
+	"deleted": false,
+	"data_ultimo_aggiornamento": {
+		"$date": {
+			"$numberLong": "1653053472990"
+		}
+	}
+}

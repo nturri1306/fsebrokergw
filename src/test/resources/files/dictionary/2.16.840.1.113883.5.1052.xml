@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<list xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+<!--ActSite-->
+
+	<el code="HumanActSite">HUMANACTSITE</el>
+	<el code="HumanSubstanceAdministrationSite">HUMANSUBSTANCEADMINISTRATIONSITE</el>
+	<el code="BE">BILATERAL EARS</el>
+	<el code="BN">BILATERAL NARES</el>
+	<el code="BU">BUTTOCK</el>
+	<el code="LA">LEFT ARM</el>
+	<el code="LAC">LEFT ANTERIOR CHEST</el>
+	<el code="LACF">LEFT ANTECUBITAL FOSSA</el>
+	<el code="LD">LEFT DELTOID</el>
+	<el code="LE">LEFT EAR</el>
+	<el code="LEJ">LEFT EXTERNAL JUGULAR</el>
+	<el code="LF">LEFT FOOT</el>
+	<el code="LG">LEFT GLUTEUS MEDIUS</el>
+	<el code="LH">LEFT HAND</el>
+	<el code="LIJ">LEFT INTERNAL JUGULAR</el>
+	<el code="LLAQ">LEFT LOWER ABD QUADRANT</el>
+	<el code="LLFA">LEFT LOWER FOREARM</el>
+	<el code="LMFA">LEFT MID FOREARM</el>
+	<el code="LN">LEFT NARIS</el>
+	<el code="LPC">LEFT POSTERIOR CHEST</el>
+	<el code="LSC">LEFT SUBCLAVIAN</el>
+	<el code="LT">LEFT THIGH</el>
+	<el code="LUA">LEFT UPPER ARM</el>
+	<el code="LUAQ">LEFT UPPER ABD QUADRANT</el>
+	<el code="LUFA">LEFT UPPER FOREARM</el>
+	<el code="LVG">LEFT VENTRAGLUTEAL</el>
+	<el code="LVL">LEFT VASTUS LATERALIS</el>
+	<el code="OD">RIGHT EYE</el>
+	<el code="OS">LEFT EYE</el>
+	<el code="OU">BILATERAL EYES</el>
+	<el code="PA">PERIANAL</el>
+	<el code="PERIN">PERINEAL</el>
+	<el code="RA">RIGHT ARM</el>
+	<el code="RAC">RIGHT ANTERIOR CHEST</el>
+	<el code="RACF">RIGHT ANTECUBITAL FOSSA</el>
+	<el code="RD">RIGHT DELTOID</el>
+	<el code="RE">RIGHT EAR</el>
+	<el code="REJ">RIGHT EXTERNAL JUGULAR</el>
+	<el code="RF">RIGHT FOOT</el>
+	<el code="RG">RIGHT GLUTEUS MEDIUS</el>
+	<el code="RH">RIGHT HAND</el>
+	<el code="RIJ">RIGHT INTERNAL JUGULAR</el>
+	<el code="RLAQ">RIGHT LOWER ABD QUADRANT</el>
+	<el code="RLFA">RIGHT LOWER FOREAM</el>
+	<el code="RMFA">RIGHT MID FOREARM</el>
+	<el code="RN">RIGHT NARIS</el>
+	<el code="RPC">RIGHT POSTERIOR CHEST</el>
+	<el code="RSC">RIGHT SUBCLAVIAN</el>
+	<el code="RT">RIGHT THIGH</el>
+	<el code="RUA">RIGHT UPPER ARM</el>
+	<el code="RUAQ">RIGHT UPPER ABD QUADRANT</el>
+	<el code="RUFA">RIGHT UPPER FOREARM</el>
+	<el code="RVG">RIGHT VENTRAGLUTEAL</el>
+	<el code="RVL">RIGHT VASTUS LATERALIS</el>
+	<el code="InjuryActSite">INJURYACTSITE</el>
+	<el code="AnimalActSite">ANIMALACTSITE</el>
+
+</list>

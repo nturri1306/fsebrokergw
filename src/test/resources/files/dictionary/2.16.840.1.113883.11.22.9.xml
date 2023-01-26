@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<list xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+<!--Absent or Unknown Allergies-->
+	<el code="no-allergy-info">NO INFORMATION ABOUT ALLERGIES</el>
+	<el code="no-known-allergies">NO KNOWN ALLERGIES</el>
+	<el code="no-known-medication-allergies">NO KNOWN MEDICATION ALLERGIES</el>
+	<el code="no-known-environmental-allergies">NO KNOWN ENVIRONMENTAL ALLERGIES</el>
+	<el code="no-known-food-allergies">NO KNOWN FOOD ALLERGIES</el>
+</list>

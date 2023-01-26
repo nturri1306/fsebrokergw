@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<list xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+<!--Tipo di Encounter Post Dimissione-->
+	<el code="AMB">AMBULATORY</el>
+	<el code="EMER">EMERGENCY</el>
+	<el code="FLD">FIELD</el>
+	<el code="HH">HOME HEALTH</el>
+	<el code="IMP">INPATIENT ENCOUNTER</el>
+	<el code="ACUTE">INPATIENT ACUTE</el>
+	<el code="NONAC">INPATIENT NON-ACUTE</el>
+	<el code="PRENC">PRE-ADMISSION</el>
+	<el code="SS">SHORT STAY</el>
+	<el code="VR">VIRTUAL</el>
+</list>	

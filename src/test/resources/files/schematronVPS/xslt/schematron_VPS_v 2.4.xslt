@@ -1,0 +1,5057 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<xsl:stylesheet xmlns:svrl="http://purl.oclc.org/dsdl/svrl" xmlns:hl7="urn:hl7-org:v3" xmlns:iso="http://purl.oclc.org/dsdl/schematron" xmlns:saxon="http://saxon.sf.net/" xmlns:schold="http://www.ascc.net/xml/schematron" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">
+<!--Implementers: please note that overriding process-prolog or process-root is 
+    the preferred method for meta-stylesheets to use where possible. -->
+
+<xsl:param name="archiveDirParameter" />
+  <xsl:param name="archiveNameParameter" />
+  <xsl:param name="fileNameParameter" />
+  <xsl:param name="fileDirParameter" />
+  <xsl:variable name="document-uri">
+    <xsl:value-of select="document-uri(/)" />
+  </xsl:variable>
+
+<!--PHASES-->
+
+
+<!--PROLOG-->
+<xsl:output indent="yes" method="xml" omit-xml-declaration="no" standalone="yes" />
+
+<!--XSD TYPES FOR XSLT2-->
+
+
+<!--KEYS AND FUNCTIONS-->
+
+
+<!--DEFAULT RULES-->
+
+
+<!--MODE: SCHEMATRON-SELECT-FULL-PATH-->
+<!--This mode can be used to generate an ugly though full XPath for locators-->
+<xsl:template match="*" mode="schematron-select-full-path">
+    <xsl:apply-templates mode="schematron-get-full-path" select="." />
+  </xsl:template>
+
+<!--MODE: SCHEMATRON-FULL-PATH-->
+<!--This mode can be used to generate an ugly though full XPath for locators-->
+<xsl:template match="*" mode="schematron-get-full-path">
+    <xsl:apply-templates mode="schematron-get-full-path" select="parent::*" />
+    <xsl:text>/</xsl:text>
+    <xsl:choose>
+      <xsl:when test="namespace-uri()=''">
+        <xsl:value-of select="name()" />
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:text>*:</xsl:text>
+        <xsl:value-of select="local-name()" />
+        <xsl:text>[namespace-uri()='</xsl:text>
+        <xsl:value-of select="namespace-uri()" />
+        <xsl:text>']</xsl:text>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="preceding" select="count(preceding-sibling::*[local-name()=local-name(current())                                   and namespace-uri() = namespace-uri(current())])" />
+    <xsl:text>[</xsl:text>
+    <xsl:value-of select="1+ $preceding" />
+    <xsl:text>]</xsl:text>
+  </xsl:template>
+  <xsl:template match="@*" mode="schematron-get-full-path">
+    <xsl:apply-templates mode="schematron-get-full-path" select="parent::*" />
+    <xsl:text>/</xsl:text>
+    <xsl:choose>
+      <xsl:when test="namespace-uri()=''">@<xsl:value-of select="name()" />
+</xsl:when>
+      <xsl:otherwise>
+        <xsl:text>@*[local-name()='</xsl:text>
+        <xsl:value-of select="local-name()" />
+        <xsl:text>' and namespace-uri()='</xsl:text>
+        <xsl:value-of select="namespace-uri()" />
+        <xsl:text>']</xsl:text>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
+<!--MODE: SCHEMATRON-FULL-PATH-2-->
+<!--This mode can be used to generate prefixed XPath for humans-->
+<xsl:template match="node() | @*" mode="schematron-get-full-path-2">
+    <xsl:for-each select="ancestor-or-self::*">
+      <xsl:text>/</xsl:text>
+      <xsl:value-of select="name(.)" />
+      <xsl:if test="preceding-sibling::*[name(.)=name(current())]">
+        <xsl:text>[</xsl:text>
+        <xsl:value-of select="count(preceding-sibling::*[name(.)=name(current())])+1" />
+        <xsl:text>]</xsl:text>
+      </xsl:if>
+    </xsl:for-each>
+    <xsl:if test="not(self::*)">
+      <xsl:text />/@<xsl:value-of select="name(.)" />
+    </xsl:if>
+  </xsl:template>
+<!--MODE: SCHEMATRON-FULL-PATH-3-->
+<!--This mode can be used to generate prefixed XPath for humans 
+	(Top-level element has index)-->
+
+<xsl:template match="node() | @*" mode="schematron-get-full-path-3">
+    <xsl:for-each select="ancestor-or-self::*">
+      <xsl:text>/</xsl:text>
+      <xsl:value-of select="name(.)" />
+      <xsl:if test="parent::*">
+        <xsl:text>[</xsl:text>
+        <xsl:value-of select="count(preceding-sibling::*[name(.)=name(current())])+1" />
+        <xsl:text>]</xsl:text>
+      </xsl:if>
+    </xsl:for-each>
+    <xsl:if test="not(self::*)">
+      <xsl:text />/@<xsl:value-of select="name(.)" />
+    </xsl:if>
+  </xsl:template>
+
+<!--MODE: GENERATE-ID-FROM-PATH -->
+<xsl:template match="/" mode="generate-id-from-path" />
+  <xsl:template match="text()" mode="generate-id-from-path">
+    <xsl:apply-templates mode="generate-id-from-path" select="parent::*" />
+    <xsl:value-of select="concat('.text-', 1+count(preceding-sibling::text()), '-')" />
+  </xsl:template>
+  <xsl:template match="comment()" mode="generate-id-from-path">
+    <xsl:apply-templates mode="generate-id-from-path" select="parent::*" />
+    <xsl:value-of select="concat('.comment-', 1+count(preceding-sibling::comment()), '-')" />
+  </xsl:template>
+  <xsl:template match="processing-instruction()" mode="generate-id-from-path">
+    <xsl:apply-templates mode="generate-id-from-path" select="parent::*" />
+    <xsl:value-of select="concat('.processing-instruction-', 1+count(preceding-sibling::processing-instruction()), '-')" />
+  </xsl:template>
+  <xsl:template match="@*" mode="generate-id-from-path">
+    <xsl:apply-templates mode="generate-id-from-path" select="parent::*" />
+    <xsl:value-of select="concat('.@', name())" />
+  </xsl:template>
+  <xsl:template match="*" mode="generate-id-from-path" priority="-0.5">
+    <xsl:apply-templates mode="generate-id-from-path" select="parent::*" />
+    <xsl:text>.</xsl:text>
+    <xsl:value-of select="concat('.',name(),'-',1+count(preceding-sibling::*[name()=name(current())]),'-')" />
+  </xsl:template>
+
+<!--MODE: GENERATE-ID-2 -->
+<xsl:template match="/" mode="generate-id-2">U</xsl:template>
+  <xsl:template match="*" mode="generate-id-2" priority="2">
+    <xsl:text>U</xsl:text>
+    <xsl:number count="*" level="multiple" />
+  </xsl:template>
+  <xsl:template match="node()" mode="generate-id-2">
+    <xsl:text>U.</xsl:text>
+    <xsl:number count="*" level="multiple" />
+    <xsl:text>n</xsl:text>
+    <xsl:number count="node()" />
+  </xsl:template>
+  <xsl:template match="@*" mode="generate-id-2">
+    <xsl:text>U.</xsl:text>
+    <xsl:number count="*" level="multiple" />
+    <xsl:text>_</xsl:text>
+    <xsl:value-of select="string-length(local-name(.))" />
+    <xsl:text>_</xsl:text>
+    <xsl:value-of select="translate(name(),':','.')" />
+  </xsl:template>
+<!--Strip characters-->  <xsl:template match="text()" priority="-1" />
+
+<!--SCHEMA SETUP-->
+<xsl:template match="/">
+    <svrl:schematron-output schemaVersion="" title="Schematron Verbale di Pronto Soccorso V 1.0 ">
+      <xsl:comment>
+        <xsl:value-of select="$archiveDirParameter" />   
+		 <xsl:value-of select="$archiveNameParameter" />  
+		 <xsl:value-of select="$fileNameParameter" />  
+		 <xsl:value-of select="$fileDirParameter" />
+      </xsl:comment>
+      <svrl:ns-prefix-in-attribute-values prefix="hl7" uri="urn:hl7-org:v3" />
+      <svrl:ns-prefix-in-attribute-values prefix="xsi" uri="http://www.w3.org/2001/XMLSchema-instance" />
+      <svrl:active-pattern>
+        <xsl:attribute name="document">
+          <xsl:value-of select="document-uri(/)" />
+        </xsl:attribute>
+        <xsl:attribute name="id">all</xsl:attribute>
+        <xsl:attribute name="name">all</xsl:attribute>
+        <xsl:apply-templates />
+      </svrl:active-pattern>
+      <xsl:apply-templates mode="M3" select="/" />
+    </svrl:schematron-output>
+  </xsl:template>
+
+<!--SCHEMATRON PATTERNS-->
+<svrl:text>Schematron Verbale di Pronto Soccorso V 1.0 </svrl:text>
+
+<!--PATTERN all-->
+
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument" mode="M3" priority="1082">
+    <svrl:fired-rule context="hl7:ClinicalDocument" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:realmCode)>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:realmCode)>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-1| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text /> DEVE avere almeno un elemento 'realmCode'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:realmCode[@code='IT'])= 1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:realmCode[@code='IT'])= 1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-2| L'elemento 'realmCode' DEVE avere l'attributo @code valorizzato come 'IT'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:templateId)>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:templateId)>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-3| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text /> DEVE avere almeno un elemento di tipo 'templateId'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.1'])= 1 and  count(hl7:templateId/@extension)= 1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.1'])= 1 and count(hl7:templateId/@extension)= 1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-4| Almeno un elemento 'templateId' DEVE essere valorizzato attraverso l'attributo @root='2.16.840.1.113883.2.9.10.1.6.1' (id del template nazionale), associato all'attributo @extension che  indica la versione a cui il templateId fa riferimento</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:code[@code='59258-4'][@codeSystem='2.16.840.1.113883.6.1']) = 1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:code[@code='59258-4'][@codeSystem='2.16.840.1.113883.6.1']) = 1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-5| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/code deve essere valorizzato con l'attributo @code='59258-4' e il @codeSystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--REPORT -->
+<xsl:if test="not(count(hl7:code[@codeSystemName='LOINC'])=1) or not(count(hl7:code[@displayName='Verbale di Pronto Soccorso'])=1 or    count(hl7:code[@displayName='VERBALE DI PRONTO SOCCORSO'])=1)">
+      <svrl:successful-report test="not(count(hl7:code[@codeSystemName='LOINC'])=1) or not(count(hl7:code[@displayName='Verbale di Pronto Soccorso'])=1 or count(hl7:code[@displayName='VERBALE DI PRONTO SOCCORSO'])=1)">
+        <xsl:attribute name="location">
+          <xsl:apply-templates mode="schematron-select-full-path" select="." />
+        </xsl:attribute>
+        <svrl:text>W001| Si raccomanda di valorizzare gli attributi dell'elemento <xsl:text />
+          <xsl:value-of select="name(.)" />
+          <xsl:text />/code nel seguente modo: @codeSystemName ='LOINC' e @displayName ='Verbale di Pronto Soccorso'.--&gt; </svrl:text>
+      </svrl:successful-report>
+    </xsl:if>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(hl7:confidentialityCode[@code='N'][@codeSystem='2.16.840.1.113883.5.25'])= 1) or     (count(hl7:confidentialityCode[@code='V'][@codeSystem='2.16.840.1.113883.5.25'])= 1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(hl7:confidentialityCode[@code='N'][@codeSystem='2.16.840.1.113883.5.25'])= 1) or (count(hl7:confidentialityCode[@code='V'][@codeSystem='2.16.840.1.113883.5.25'])= 1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-6| L'elemento 'confidentialityCode' di <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text /> DEVE avere l'attributo @code valorizzato con 'N' o 'V', e il @codeSystem='2.16.840.1.113883.5.25'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:languageCode)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:languageCode)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-7| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text /> DEVE contenere un solo elemento 'languageCode' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="versionNumber" select="hl7:versionNumber/@value" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(string(number($versionNumber)) = 'NaN') or      ($versionNumber= '1' and hl7:id/@root = hl7:setId/@root and hl7:id/@extension = hl7:setId/@extension) or      ($versionNumber!= '1' and hl7:id/@root = hl7:setId/@root and hl7:id/@extension != hl7:setId/@extension) or      (hl7:id/@root != hl7:setId/@root)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(string(number($versionNumber)) = 'NaN') or ($versionNumber= '1' and hl7:id/@root = hl7:setId/@root and hl7:id/@extension = hl7:setId/@extension) or ($versionNumber!= '1' and hl7:id/@root = hl7:setId/@root and hl7:id/@extension != hl7:setId/@extension) or (hl7:id/@root != hl7:setId/@root)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-8| Se ClinicalDocument.id e ClinicalDocument.setId usano lo stesso dominio di identificazione (@root identico) allora l’attributo @extension del
+			ClinicalDocument.id deve essere diverso da quello del ClinicalDocument.setId a meno che ClinicalDocument.versionNumber non sia uguale ad 1; cioè i valori di setId ed id per un documento clinico possono coincidere solo per la prima versione di un documento</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(string(number($versionNumber)) ='NaN') or         ($versionNumber=1) or          (($versionNumber >1) and count(hl7:relatedDocument)=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(string(number($versionNumber)) ='NaN') or ($versionNumber=1) or (($versionNumber >1) and count(hl7:relatedDocument)=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-9| Se l'attributo <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/versionNumber/@value è maggiore di 1, l'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />  deve contenere un elemento di tipo 'relatedDocument'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="num_addr" select="count(hl7:recordTarget/hl7:patientRole/hl7:addr)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="$num_addr=0 or (count(hl7:recordTarget/hl7:patientRole/hl7:addr/hl7:country)=$num_addr and     count(hl7:recordTarget/hl7:patientRole/hl7:addr/hl7:city)=$num_addr and     count(hl7:recordTarget/hl7:patientRole/hl7:addr/hl7:streetAddressLine)=$num_addr)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="$num_addr=0 or (count(hl7:recordTarget/hl7:patientRole/hl7:addr/hl7:country)=$num_addr and count(hl7:recordTarget/hl7:patientRole/hl7:addr/hl7:city)=$num_addr and count(hl7:recordTarget/hl7:patientRole/hl7:addr/hl7:streetAddressLine)=$num_addr)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-10| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/recordTarget/patientRole/addr DEVE riportare i sotto-elementi 'country', 'city' e 'streetAddressLine' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="patient" select="hl7:recordTarget/hl7:patientRole/hl7:patient" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($patient)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($patient)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-11| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/recordTaget/patientRole DEVE contenere l'elemento 'patient'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count($patient/hl7:name/hl7:given)=1 and count($patient/hl7:name/hl7:family)=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count($patient/hl7:name/hl7:given)=1 and count($patient/hl7:name/hl7:family)=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-12| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/recordTaget/patientRole/patient/name DEVE riportare gli elementi 'given' e 'family'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="genderOID" select="hl7:recordTarget/hl7:patientRole/hl7:patient/hl7:administrativeGenderCode/@codeSystem" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:recordTarget/hl7:patientRole/hl7:patient/hl7:administrativeGenderCode)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:recordTarget/hl7:patientRole/hl7:patient/hl7:administrativeGenderCode)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-13| L'attributo <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/recordTarget/patientRole/patient DEVE contenere l'elemento administrativeGenderCode </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="$genderOID='2.16.840.1.113883.5.1'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="$genderOID='2.16.840.1.113883.5.1'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-14| L'OID assegnato all'attributo <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/recordTarget/patientRole/patient/administrativeGenderCode/@codeSystem='<xsl:text />
+            <xsl:value-of select="$genderOID" />
+            <xsl:text />' non è corretto. L'attributo DEVE essere valorizzato con '2.16.840.1.113883.5.1' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:author/hl7:assignedAuthor/hl7:id[@root='2.16.840.1.113883.2.9.4.3.2'])>= 1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:author/hl7:assignedAuthor/hl7:id[@root='2.16.840.1.113883.2.9.4.3.2'])>= 1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-15| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/author/assignedAuthor DEVE contenere almeno un elemento 'id' con il relativo attributo @root='2.16.840.1.113883.2.9.4.3.2'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="num_addr_author" select="count(hl7:author/hl7:assignedAuthor/hl7:addr)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="$num_addr_author=0 or (count(hl7:author/hl7:assignedAuthor/hl7:addr/hl7:country)=$num_addr_author and     count(hl7:author/hl7:assignedAuthor/hl7:addr/hl7:city)=$num_addr_author and    count(hl7:author/hl7:assignedAuthor/hl7:addr/hl7:streetAddressLine)=$num_addr_author)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="$num_addr_author=0 or (count(hl7:author/hl7:assignedAuthor/hl7:addr/hl7:country)=$num_addr_author and count(hl7:author/hl7:assignedAuthor/hl7:addr/hl7:city)=$num_addr_author and count(hl7:author/hl7:assignedAuthor/hl7:addr/hl7:streetAddressLine)=$num_addr_author)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-16| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/author/assignedAuthor/addr DEVE riportare i sotto-elementi 'country', 'city' e 'streetAddressLine' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="name_author" select="hl7:author/hl7:assignedAuthor/hl7:assignedPerson/hl7:name" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count($name_author/hl7:given)=1 and count($name_author/hl7:family)=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count($name_author/hl7:given)=1 and count($name_author/hl7:family)=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-17| L'elemento ClinicalDocument/author/assignedAuthor/assignedPerson/name DEVE avere gli elementi 'given' e 'family'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:dataEnterer)=0 or count(hl7:dataEnterer/hl7:time)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:dataEnterer)=0 or count(hl7:dataEnterer/hl7:time)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-18| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/dataEnterer se presnete, DEVE contenere un elemento 'time'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="id_dataEnterer" select="hl7:dataEnterer/hl7:assignedEntity/hl7:id" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:dataEnterer)=0 or count($id_dataEnterer[@root='2.16.840.1.113883.2.9.4.3.2'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:dataEnterer)=0 or count($id_dataEnterer[@root='2.16.840.1.113883.2.9.4.3.2'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-19| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/dataEnterer/assignedEntity DEVE avere almeno un elemento 'id' <xsl:text />
+            <xsl:value-of select="$id_dataEnterer" />
+            <xsl:text /> con l'attributo @root='2.16.840.1.113883.2.9.4.3.2'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="num_addr_data_ent" select="count(hl7:dataEnterer/hl7:assignedEntity/hl7:addr)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="$num_addr_data_ent=0 or (count(hl7:dataEnterer/hl7:assignedEntity/hl7:addr/hl7:country)=$num_addr_data_ent and     count(hl7:dataEnterer/hl7:assignedEntity/hl7:addr/hl7:city)=$num_addr_data_ent and    count(hl7:dataEnterer/hl7:assignedEntity/hl7:addr/hl7:streetAddressLine)=$num_addr_data_ent)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="$num_addr_data_ent=0 or (count(hl7:dataEnterer/hl7:assignedEntity/hl7:addr/hl7:country)=$num_addr_data_ent and count(hl7:dataEnterer/hl7:assignedEntity/hl7:addr/hl7:city)=$num_addr_data_ent and count(hl7:dataEnterer/hl7:assignedEntity/hl7:addr/hl7:streetAddressLine)=$num_addr_data_ent)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-20| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/dataEnterer/assignedEntity/addr DEVE riportare i sotto-elementi 'country', 'city' e 'streetAddressLine' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="nome" select="hl7:dataEnterer/hl7:assignedEntity/hl7:assignedPerson/hl7:name" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:dataEnterer)=0 or (count($nome/hl7:family)=1 and count($nome/hl7:given)=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:dataEnterer)=0 or (count($nome/hl7:family)=1 and count($nome/hl7:given)=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-21| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/dataEnterer/assignedEntity/assignedPerson/name DEVE avere gli elementi 'given' e 'family'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:custodian/hl7:assignedCustodian/hl7:representedCustodianOrganization/hl7:name)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:custodian/hl7:assignedCustodian/hl7:representedCustodianOrganization/hl7:name)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-22| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/custodian/assignedCustodian/representedCustodianOrganization deve contenere un elemento 'name'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="num_addr_cust" select="count(hl7:custodian/hl7:assignedCustodian/hl7:representedCustodianOrganization/hl7:addr)" />
+    <xsl:variable name="addr_cust" select="hl7:custodian/hl7:assignedCustodian/hl7:representedCustodianOrganization/hl7:addr" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="$num_addr_cust=0 or (count($addr_cust/hl7:country)=$num_addr_cust and    count($addr_cust/hl7:city)=$num_addr_cust and     count($addr_cust/hl7:streetAddressLine)=$num_addr_cust)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="$num_addr_cust=0 or (count($addr_cust/hl7:country)=$num_addr_cust and count($addr_cust/hl7:city)=$num_addr_cust and count($addr_cust/hl7:streetAddressLine)=$num_addr_cust)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-23| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/custodian/assignedCustodian/representedCustodianOrganization/addr DEVE riportare i sotto-elementi 'country','city' e 'streetAddressLine'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:legalAuthenticator)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:legalAuthenticator)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-24| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/legalAuthenticator è obbligatorio</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:legalAuthenticator/hl7:signatureCode[@code='S'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:legalAuthenticator/hl7:signatureCode[@code='S'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-25| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/legalAuthenticator/signatureCode deve essere valorizzato con il codice "S" </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:legalAuthenticator/hl7:assignedEntity/hl7:id[@root='2.16.840.1.113883.2.9.4.3.2'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:legalAuthenticator/hl7:assignedEntity/hl7:id[@root='2.16.840.1.113883.2.9.4.3.2'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-26| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/legalAuthenticator/assignedEntity DEVE contenere almeno un elemento id valorizzato con l'attributo @root='2.16.840.1.113883.2.9.4.3.2'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:legalAuthenticator/hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:family)=1 and     count(hl7:legalAuthenticator/hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:given)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:legalAuthenticator/hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:family)=1 and count(hl7:legalAuthenticator/hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:given)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-27| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/legalAuthenticator/assignedEntity/assignedPerson/name DEVE riportare gli elementi 'given' e 'family'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participant)=0 or count(hl7:participant/hl7:associatedEntity/hl7:id)>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participant)=0 or count(hl7:participant/hl7:associatedEntity/hl7:id)>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-28| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/participant/associatedEntity deve contenere l'elemento 'id'.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:componentOf)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:componentOf)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-29| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/componentOf è obbligatorio </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:componentOf/hl7:encompassingEncounter/hl7:effectiveTime/hl7:low)=1 and count(hl7:componentOf/hl7:encompassingEncounter/hl7:effectiveTime/hl7:high)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:componentOf/hl7:encompassingEncounter/hl7:effectiveTime/hl7:low)=1 and count(hl7:componentOf/hl7:encompassingEncounter/hl7:effectiveTime/hl7:high)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-30| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/componentOf/encompassingEncounter/effectiveTime deve contenere gli elementi 'low' e 'high' valorizzati </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="path_name" select="hl7:componentOf/hl7:encompassingEncounter/hl7:responsibleParty/hl7:assignedEntity/hl7:assignedPerson/hl7:name" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:componentOf/hl7:encompassingEncounter/hl7:responsibleParty/hl7:assignedEntity/hl7:assignedPerson)=0 or     (count($path_name/hl7:given)=1 and count($path_name/hl7:family)=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:componentOf/hl7:encompassingEncounter/hl7:responsibleParty/hl7:assignedEntity/hl7:assignedPerson)=0 or (count($path_name/hl7:given)=1 and count($path_name/hl7:family)=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-31| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/componentOf/encompassingEncounter/responsibleParty/assignedentity/assignedPerson/name deve contenere gli elementi 'given' e 'family' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:componentOf/hl7:encompassingEncounter/hl7:location)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:componentOf/hl7:encompassingEncounter/hl7:location)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-32| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/encompassingEncounter DEVE contenere l'elemento 'location'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:componentOf/hl7:encompassingEncounter/hl7:location/hl7:healthCareFacility/hl7:serviceProviderOrganization)=0 or     count (hl7:componentOf/hl7:encompassingEncounter/hl7:location/hl7:healthCareFacility/hl7:serviceProviderOrganization/hl7:id)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:componentOf/hl7:encompassingEncounter/hl7:location/hl7:healthCareFacility/hl7:serviceProviderOrganization)=0 or count (hl7:componentOf/hl7:encompassingEncounter/hl7:location/hl7:healthCareFacility/hl7:serviceProviderOrganization/hl7:id)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-33| L'elemento <xsl:text />
+            <xsl:value-of select="name(.)" />
+            <xsl:text />/componentOf/encompassingEncounter/location/healthcareFacility/serviceProviderOrganization deve contenere l'elemento 'id' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.6.1']" mode="M3" priority="1081">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.6.1']" />
+    <xsl:variable name="val_LOINC" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.6.1?code=',$val_LOINC))//result='true' or     $val_LOINC='LA16666-2' or $val_LOINC='LA18632-2' or $val_LOINC='LA28752-6' or $val_LOINC='LA18821-1'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.6.1?code=',$val_LOINC))//result='true' or $val_LOINC='LA16666-2' or $val_LOINC='LA18632-2' or $val_LOINC='LA28752-6' or $val_LOINC='LA18821-1'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 1_DIZ| Codice LOINC '<xsl:text />
+            <xsl:value-of select="$val_LOINC" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.2.9.6.1.5']" mode="M3" priority="1080">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.2.9.6.1.5']" />
+    <xsl:variable name="val_AIC" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.6.1.5?code=',$val_AIC))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.6.1.5?code=',$val_AIC))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 2_DIZ| Codice AIC '<xsl:text />
+            <xsl:value-of select="$val_AIC" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.6.73']" mode="M3" priority="1079">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.6.73']" />
+    <xsl:variable name="val_ATC" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.6.73?code=',$val_ATC))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.6.73?code=',$val_ATC))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 3_DIZ| Codice ATC '<xsl:text />
+            <xsl:value-of select="$val_ATC" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.2.9.6.1.51']" mode="M3" priority="1078">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.2.9.6.1.51']" />
+    <xsl:variable name="val_GE" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.6.1.51?code=',$val_GE))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.6.1.51?code=',$val_GE))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 4_DIZ| Codice GE '<xsl:text />
+            <xsl:value-of select="$val_GE" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//hl7:statusCode" mode="M3" priority="1077">
+    <svrl:fired-rule context="//hl7:statusCode" />
+    <xsl:variable name="val_status" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.11.22.12?code=',$val_status))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.11.22.12?code=',$val_status))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 5_DIZ| Codice ActStatus '<xsl:text />
+            <xsl:value-of select="$val_status" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.2.9.77.22.11.2']" mode="M3" priority="1076">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.2.9.77.22.11.2']" />
+    <xsl:variable name="val_AllNoFarm" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.77.22.11.2?code=',$val_AllNoFarm))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.77.22.11.2?code=',$val_AllNoFarm))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 7_DIZ| Codice "Allergeni (No Farmaci)"  '<xsl:text />
+            <xsl:value-of select="$val_AllNoFarm" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@unit]" mode="M3" priority="1075">
+    <svrl:fired-rule context="//*[@unit]" />
+    <xsl:variable name="unit" select="encode-for-uri(@unit)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.1.11.12839?code=',$unit))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.1.11.12839?code=',$unit))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 8_DIZ| Codice "UnitsOfMeasureCaseSensitive"  '<xsl:text />
+            <xsl:value-of select="$unit" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.2.9.77.22.11.3']" mode="M3" priority="1074">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.2.9.77.22.11.3']" />
+    <xsl:variable name="reaz_intoller" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.77.22.11.3?code=',$reaz_intoller))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.77.22.11.3?code=',$reaz_intoller))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 9_DIZ| Codice "Reazioni Intolleranza"  '<xsl:text />
+            <xsl:value-of select="$reaz_intoller" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.2.9.77.22.11.4']" mode="M3" priority="1073">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.2.9.77.22.11.4']" />
+    <xsl:variable name="reaz_aller" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.77.22.11.4?code=',$reaz_aller))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.77.22.11.4?code=',$reaz_aller))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 10_DIZ| Codice "ReazioniAllergiche"  '<xsl:text />
+            <xsl:value-of select="$reaz_aller" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.2.9.77.22.11.6']" mode="M3" priority="1072">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.2.9.77.22.11.6']" />
+    <xsl:variable name="criticality" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.77.22.11.6?code=',$criticality))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.77.22.11.6?code=',$criticality))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 11_DIZ| Codice "CriticalityObservation"  '<xsl:text />
+            <xsl:value-of select="$criticality" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.2.9.77.22.11.7']" mode="M3" priority="1071">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.2.9.77.22.11.7']" />
+    <xsl:variable name="status_problem" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.77.22.11.7?code=',$status_problem))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.77.22.11.7?code=',$status_problem))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 12_DIZ| Codice "StatoClinicoProblema"  '<xsl:text />
+            <xsl:value-of select="$status_problem" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.2.9.77.22.11.10']" mode="M3" priority="1070">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.2.9.77.22.11.10']" />
+    <xsl:variable name="conicita" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.77.22.11.10?code=',$conicita))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.77.22.11.10?code=',$conicita))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 13_DIZ| Codice "Cronicità"  '<xsl:text />
+            <xsl:value-of select="$conicita" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.5.1052']" mode="M3" priority="1069">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.5.1052']" />
+    <xsl:variable name="sito" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.5.1052?code=',$sito))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.5.1052?code=',$sito))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 14_DIZ| Codice "ActSite"  '<xsl:text />
+            <xsl:value-of select="$sito" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.1.11.19700']" mode="M3" priority="1068">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.1.11.19700']" />
+    <xsl:variable name="intoleranceType" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.1.11.19700?code=',$intoleranceType))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.1.11.19700?code=',$intoleranceType))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 15_DIZ| Codice "ObservationIntoleranceType"  '<xsl:text />
+            <xsl:value-of select="$intoleranceType" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.5.112']" mode="M3" priority="1067">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.5.112']" />
+    <xsl:variable name="via_somminist" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.5.112?code=',$via_somminist))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.5.112?code=',$via_somminist))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 17_DIZ| Codice "RouteOfAdministration"  '<xsl:text />
+            <xsl:value-of select="$via_somminist" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.1.11.1']" mode="M3" priority="1066">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.1.11.1']" />
+    <xsl:variable name="gender" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.1.11.1?code=',$gender))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.1.11.1?code=',$gender))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 18_DIZ| Codice "AdministrativeGender"  '<xsl:text />
+            <xsl:value-of select="$gender" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.9']" mode="M3" priority="1065">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.9']" />
+    <xsl:variable name="type_encounter" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.1.11.1.2.9?code=',$type_encounter))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.1.11.1.2.9?code=',$type_encounter))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 19_DIZ| Codice "TipoEncounterPostDimissione"  '<xsl:text />
+            <xsl:value-of select="$type_encounter" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.2.9.77.22.11.8']" mode="M3" priority="1064">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.2.9.77.22.11.8']" />
+    <xsl:variable name="età_insorgenza" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.77.22.11.8?code=',$età_insorgenza))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.77.22.11.8?code=',$età_insorgenza))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 20_DIZ| Codice "EtàInsorgenza del problema"  '<xsl:text />
+            <xsl:value-of select="$età_insorgenza" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.2.9.77.22.11.9']" mode="M3" priority="1063">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.2.9.77.22.11.9']" />
+    <xsl:variable name="problem_obs" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.77.22.11.9?code=',$problem_obs))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.2.9.77.22.11.9?code=',$problem_obs))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 21_DIZ| Codice "ProblemObservation"  '<xsl:text />
+            <xsl:value-of select="$problem_obs" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//*[@codeSystem='2.16.840.1.113883.5.111']" mode="M3" priority="1062">
+    <svrl:fired-rule context="//*[@codeSystem='2.16.840.1.113883.5.111']" />
+    <xsl:variable name="roleCode" select="encode-for-uri(@code)" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.5.111?code=',$roleCode))//result='true'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="doc(concat('http://###PLACEHOLDER_URL###/v1/validate-terminology/2.16.840.1.113883.5.111?code=',$roleCode))//result='true'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>Errore 22_DIZ| Codice "RoleCode"  '<xsl:text />
+            <xsl:value-of select="$roleCode" />
+            <xsl:text />' errato!
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//hl7:telecom" mode="M3" priority="1061">
+    <svrl:fired-rule context="//hl7:telecom" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(@use)=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(@use)=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-34| L’elemento 'telecom' DEVE contenere l'attributo @use </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//hl7:id[@root='2.16.840.1.113883.2.9.4.3.2']" mode="M3" priority="1060">
+    <svrl:fired-rule context="//hl7:id[@root='2.16.840.1.113883.2.9.4.3.2']" />
+    <xsl:variable name="CF" select="@extension" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="matches(@extension, '[A-Z0-9]{16}')" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="matches(@extension, '[A-Z0-9]{16}')">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-35| codice fiscale '<xsl:text />
+            <xsl:value-of select="$CF" />
+            <xsl:text />' cittadino ed operatore: 16 cifre [A-Z0-9]{16}</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="//hl7:observation" mode="M3" priority="1059">
+    <svrl:fired-rule context="//hl7:observation" />
+    <xsl:variable name="moodCd" select="@moodCode" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(@classCode)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(@classCode)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-36| L'attributo "@classCode" dell'elemento "observation" deve essere presente </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="$moodCd='EVN'" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="$moodCd='EVN'">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-37| L'attributo "@moodCode" dell'elemento "observation" deve essere valorizzato con "EVN" </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody" mode="M3" priority="1058">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='11459-5'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='11459-5'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-38| Sezione Modalità di Trasporto: la sezione DEVE essere presente</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='11459-5']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.20'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='11459-5']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.20'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-39| Sezione Modalità di Trasporto: la sezione deve contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.20'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='11459-5']]/hl7:text)=1 and count(hl7:component/hl7:section[hl7:code[@code='11459-5']]/hl7:entry)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='11459-5']]/hl7:text)=1 and count(hl7:component/hl7:section[hl7:code[@code='11459-5']]/hl7:entry)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-40| Sezione Modalità di Trasporto: la sezione DEVE contenere un elemento 'text' e un solo elemento 'entry'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='46239-0'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='46239-0'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-41| Sezione Motivo della Visita: la sezione DEVE essere presente</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='46239-0']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.42'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='46239-0']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.42'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-42| Sezione Motivo della Visita: la sezione deve contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.42'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='46239-0']]/hl7:text)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='46239-0']]/hl7:text)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-43| Sezione Motivo della Visita: la sezione DEVE contenere l'elemento 'text'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="probl_principale" select="hl7:component/hl7:section[hl7:code[@code='46239-0']]/hl7:entry[hl7:observation/hl7:code[@code='56817-0']]" />
+    <xsl:variable name="causa_accesso" select="hl7:component/hl7:section[hl7:code[@code='46239-0']]/hl7:entry[hl7:observation/hl7:code[@code='29298-7']]" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($probl_principale)=1 and (count($causa_accesso)&lt;=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($probl_principale)=1 and (count($causa_accesso)&lt;=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-44| Sezione Motivo della visita: la sezione DEVE contenere almeno una 'entry' relativa al Problema Principale e può contenere una seconda 'entry' relativa alla Causa di Accesso</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($probl_principale/hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.37'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($probl_principale/hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.37'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-45| Sezione Motivo della visita: l'elemento entry/observation relativo al "Problema Principale" DEVE contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.37'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($probl_principale/hl7:observation/hl7:code[@code='56817-0'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($probl_principale/hl7:observation/hl7:code[@code='56817-0'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-46| Sezione Motivo della visita: l'elemento entry/observation/code relativo al "Problema Principale" deve avere l'attributo @code valorizzato con '56817-0' e l'attributo @codeSystem con '2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($probl_principale/hl7:observation/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($probl_principale/hl7:observation/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-47| Sezione Motivo della visita: l'elemento entry/observation/statusCode relativo al "Problema Principale" DEVE  assumere il valore 'completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($probl_principale/hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.2.9.6.1.54.2'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($probl_principale/hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.2.9.6.1.54.2'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-48| Sezione Motivo della visita: l'elemento entry/observation/value relativo al "Problema Principale" DEVE essere valorizzato col value set ProblemaPrincipale_VPS</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($causa_accesso)=0 or      count($causa_accesso/hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.87'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($causa_accesso)=0 or count($causa_accesso/hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.87'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-49| Sezione Motivo della visita: l'elemento entry relativo alla "Causa di accesso" DEVE contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.87'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($causa_accesso)=0 or      count($causa_accesso/hl7:observation/hl7:code[@code='29298-7'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($causa_accesso)=0 or count($causa_accesso/hl7:observation/hl7:code[@code='29298-7'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-50| Sezione Motivo della visita: l'elemento entry relativo alla "Causa di accesso" DEVE contenere l'elemento code valorizzato con l'attributo @code='29298-7' e l'attributo @codeSystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($causa_accesso)=0 or      count($causa_accesso/hl7:observation/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($causa_accesso)=0 or count($causa_accesso/hl7:observation/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-51| Sezione Motivo della visita: l'elemento entry relativo alla "Causa di accesso" DEVE contenere l'elemento statusCode  col valore costante 'completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($causa_accesso)=0 or      count($causa_accesso/hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.12'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($causa_accesso)=0 or count($causa_accesso/hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.12'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-52| Sezione Motivo della visita: l'elemento entry relativo alla "Causa di accesso" DEVE contenere l'elemento value valorizzato col value set CausaAccesso_VPS</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='54094-8'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='54094-8'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-53| Sezione Triage: la sezione DEVE essere presente</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='54094-8']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.21'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='54094-8']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.21'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-54| Sezione Triage: la sezione deve contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.21'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='54094-8']]/hl7:text)=1 and count(hl7:component/hl7:section[hl7:code[@code='54094-8']]/hl7:entry)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='54094-8']]/hl7:text)=1 and count(hl7:component/hl7:section[hl7:code[@code='54094-8']]/hl7:entry)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-55| Sezione Triage: la sezione DEVE contenere un elemento 'text' ed un solo elemento 'entry'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-56| Sezione Dimissione: la sezione DEVE essere presente</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or     count(hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.24'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or count(hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.24'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-57| Sezione Dimissione: la sezione deve contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.24'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or    count(hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:text)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or count(hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:text)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-58| Sezione Dimissione: la sezione DEVE contenere l'elemento 'text'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="act_discharge" select="hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry/hl7:act" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or     count($act_discharge[@classCode='ACT'][@moodCode='EVN'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or count($act_discharge[@classCode='ACT'][@moodCode='EVN'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-59| Sezione Dimissione: l'entry "Dimissione" DEVE contenere un elemento 'act' con gli attributi @classCode='ACT' e @moodCode='EVN'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or     count($act_discharge/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.66'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or count($act_discharge/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.66'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-60| Sezione Dimissione: l'entry/act "Dimissione" DEVE contenere un elemento 'templateId' valorizzato con l'attrivuto @root='2.16.840.1.113883.2.9.10.1.6.66'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or     count($act_discharge/hl7:code[@code='dimissione'][@codeSystem='2.16.840.1.113883.2.9.5.1.4'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or count($act_discharge/hl7:code[@code='dimissione'][@codeSystem='2.16.840.1.113883.2.9.5.1.4'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-61| Sezione Dimissione: l'entry/act "Dimissione" DEVE contenere un elemento 'code' valorizzato con @code='dimissione' e @codeSystem='2.16.840.1.113883.2.9.5.1.4'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or      count($act_discharge/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or count($act_discharge/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-62| Sezione Dimissione: l'entry/act "Dimissione" DEVE contenere un elemento 'statusCode' valorizzato con @code='completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or count($act_discharge/hl7:effectiveTime)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or count($act_discharge/hl7:effectiveTime)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-63| Sezione Dimissione: l'entry/act "Dimissione" DEVE contenere un elemento 'effectiveTime'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or count($act_discharge/hl7:performer)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or count($act_discharge/hl7:performer)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-64| Sezione Dimissione: l'entry/act "Dimissione" DEVE contenere un elemento 'performer'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or      count($act_discharge/hl7:performer/hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:family)=1 and      count($act_discharge/hl7:performer/hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:given)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or count($act_discharge/hl7:performer/hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:family)=1 and count($act_discharge/hl7:performer/hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:given)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-65| Sezione Dimissione: l'entry/act/performer/assignedEntity/assignedPerson/name DEVE contenere gli elementi 'family' e 'given'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or      count($act_discharge/hl7:entryRelationship[hl7:observation/hl7:code[@code='29308-4']])>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or count($act_discharge/hl7:entryRelationship[hl7:observation/hl7:code[@code='29308-4']])>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-66| Sezione Dimissione: l'entry/act "Dimissione" DEVE contenere almeno un elemento 'entryRelationship' relativo alla Diagnosi</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or      count($act_discharge/hl7:entryRelationship[hl7:observation/hl7:code[@code='11302-7']])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or count($act_discharge/hl7:entryRelationship[hl7:observation/hl7:code[@code='11302-7']])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-67| Sezione Dimissione: l'entry/act "Dimissione" DEVE contenere un solo elemento 'entryRelationship' relativo all'Esito</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or      count($act_discharge/hl7:entryRelationship/hl7:observation[hl7:code[@code='11302-7']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.69'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or count($act_discharge/hl7:entryRelationship/hl7:observation[hl7:code[@code='11302-7']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.69'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-68| Sezione Dimissione: l'entry/act/entryRelationship relativo all'Esito DEVE contenere  un elemento 'templateId' valorizzato con @root='2.16.840.1.113883.2.9.10.1.6.69'.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or      count($act_discharge/hl7:entryRelationship/hl7:observation[hl7:code[@code='11302-7']]/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or count($act_discharge/hl7:entryRelationship/hl7:observation[hl7:code[@code='11302-7']]/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-69| Sezione Dimissione: l'entry/act/entryRelationship relativo all'Esito DEVE contenere  un elemento 'statusCode' valorizzato con @code='completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or      count($act_discharge/hl7:entryRelationship/hl7:observation[hl7:code[@code='11302-7']]/hl7:value[@codeSystem='2.16.840.1.113883.2.9.6.1.54.5'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section/hl7:code[@code='28574-2'])=0 or count($act_discharge/hl7:entryRelationship/hl7:observation[hl7:code[@code='11302-7']]/hl7:value[@codeSystem='2.16.840.1.113883.2.9.6.1.54.5'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-70| Sezione Dimissione: l'entry/act/entryRelationship relativo all'Esito DEVE contenere  un elemento 'value' valorizzato secondo il value set "EsitoTrattamento_VPS" - @codeSystem='2.16.840.1.113883.2.9.6.1.54.5'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="prognosi" select="hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry[hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.66']]" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count($prognosi)&lt;=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count($prognosi)&lt;=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-71| Sezione Dimissione: l'entry/observation "Prognosi" può essere presente una sola volta</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($prognosi)=0 or count($prognosi/hl7:observation/hl7:code[@code='75328-5'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($prognosi)=0 or count($prognosi/hl7:observation/hl7:code[@code='75328-5'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-72| Sezione Dimissione: l'entry/observation "Prognosi" DEVE contenere un elemento 'code' valorizzato con @code='75328-5' @codeSystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($prognosi)=0 or count($prognosi/hl7:observation/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($prognosi)=0 or count($prognosi/hl7:observation/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-73| Sezione Dimissione: l'entry/observation "Prognosi" DEVE contenere un elemento 'statusCode' valorizzato con @code='completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($prognosi)=0 or count($prognosi/hl7:observation/hl7:value)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($prognosi)=0 or count($prognosi/hl7:observation/hl7:value)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-74| Sezione Dimissione: l'entry/observation "Prognosi" DEVE contenere un elemento 'value'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="appropriatezza" select="hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry[hl7:observation/hl7:code[@code='11283-9']]" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count($appropriatezza)&lt;=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count($appropriatezza)&lt;=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-75| Sezione Dimissione: l'entry/observation "Livello di Appropriatezza" può essere presente una sola volta</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($appropriatezza)=0 or count($appropriatezza/hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.72'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($appropriatezza)=0 or count($appropriatezza/hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.72'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-76| Sezione Dimissione: l'entry/observation "Livello di Appropriatezza" DEVE contenere un elemento 'templateId' valorizzato con @root='2.16.840.1.113883.2.9.10.1.6.72'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($appropriatezza)=0 or count($appropriatezza/hl7:observation/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($appropriatezza)=0 or count($appropriatezza/hl7:observation/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-77| Sezione Dimissione: l'entry/observation "Livello di Appropriatezza" DEVE contenere un elemento 'statusCode' valorizzato con @code='completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($appropriatezza)=0 or count($appropriatezza/hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.2.9.6.1.54.4'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($appropriatezza)=0 or count($appropriatezza/hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.2.9.6.1.54.4'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-78| Sezione Dimissione: l'entry/observation "Livello di Appropriatezza" DEVE contenere un elemento 'value' valorizzato secondo il value set "CodiceTriage_VPS" @codeSystem='2.16.840.1.113883.2.9.6.1.54.4'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="data_decesso" select="hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry[hl7:observation/hl7:code[@code='31211-6']]" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count($data_decesso)&lt;=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count($data_decesso)&lt;=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-79| Sezione Dimissione: l'entry/observation "Data Decesso" può essere presente una sola volta</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($data_decesso)=0 or count($data_decesso/hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.86'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($data_decesso)=0 or count($data_decesso/hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.86'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-80| Sezione Dimissione: l'entry/observation "Data Decesso" DEVE contenere un elemento 'templateId' valorizzato con @root='2.16.840.1.113883.2.9.10.1.6.86'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($data_decesso)=0 or count($data_decesso/hl7:observation/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($data_decesso)=0 or count($data_decesso/hl7:observation/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-81| Sezione Dimissione: l'entry/observation "Data Decesso" DEVE contenere un elemento 'statusCode' @code='completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($data_decesso)=0 or count($data_decesso/hl7:observation/hl7:effectiveTime)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($data_decesso)=0 or count($data_decesso/hl7:observation/hl7:effectiveTime)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-82| Sezione Dimissione: l'entry/observation "Data Decesso" DEVE contenere un elemento 'effectiveTime'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="autopsia" select="hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry[hl7:observation/hl7:code[@code='45477-7']]" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count($autopsia)&lt;=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count($autopsia)&lt;=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-83| Sezione Dimissione: l'entry/observation "Richiesta Autopsia" può essere presente una sola volta</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($autopsia)=0 or count($autopsia/hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.73'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($autopsia)=0 or count($autopsia/hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.73'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-84| Sezione Dimissione: l'entry/observation "Richiesta Autopsia" DEVE contenere un elemento 'templateId' @root='2.16.840.1.113883.2.9.10.1.6.73'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($autopsia)=0 or count($autopsia/hl7:observation/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($autopsia)=0 or count($autopsia/hl7:observation/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-85| Sezione Dimissione: l'entry/observation "Richiesta Autopsia" DEVE contenere un elemento 'statusCode' @code='completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($autopsia)=0 or count($autopsia/hl7:observation/hl7:value[@xsi:type='BL'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($autopsia)=0 or count($autopsia/hl7:observation/hl7:value[@xsi:type='BL'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-86| Sezione Dimissione: l'entry/observation "Richiesta Autopsia" DEVE contenere un elemento 'value' di tipo @xsi:type='BL'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.56'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.56'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-87| Sezione Inquadramento Clinico Iniziale: la sezione deve contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.56'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='11329-0']])=1 or    count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='29545-1']])=1 or    count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='42346-7']])=1 or    count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='48765-2']])=1 or    count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='11450-4']])=1) or    count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:text)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='11329-0']])=1 or count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='29545-1']])=1 or count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='42346-7']])=1 or count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='48765-2']])=1 or count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='11450-4']])=1) or count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:text)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-88| Sezione Inquadramento Clinico Iniziale: la sezione deve contenere l'elemento 'text'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component[hl7:section/hl7:code[@code='11329-0']])&lt;=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component[hl7:section/hl7:code[@code='11329-0']])&lt;=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-89| Sezione Inquadramento Clinico Iniziale: la sezione può contenere al massimo una sotto-sezione "Anamnesi"</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component[hl7:section/hl7:code[@code='29545-1']])&lt;=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component[hl7:section/hl7:code[@code='29545-1']])&lt;=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-90| Sezione Inquadramento Clinico Iniziale: la sezione può contenere al massimo una sotto-sezione "Esame Obiettivo"</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component[hl7:section/hl7:code[@code='42346-7']])&lt;=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component[hl7:section/hl7:code[@code='42346-7']])&lt;=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-91| Sezione Inquadramento Clinico Iniziale: la sezione può contenere al massimo una sotto-sezione "Terapia Farmacologica all'ingresso"</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component[hl7:section/hl7:code[@code='48765-2']])&lt;=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component[hl7:section/hl7:code[@code='48765-2']])&lt;=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-92| Sezione Inquadramento Clinico Iniziale: la sezione può contenere al massimo una sotto-sezione "Allergie"</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component[hl7:section/hl7:code[@code='11450-4']])&lt;=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component[hl7:section/hl7:code[@code='11450-4']])&lt;=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-93| Sezione Inquadramento Clinico Iniziale: la sezione può contenere al massimo una sotto-sezione "Problemi aperti"</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='46240-8']])=0 or count(hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.50'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='46240-8']])=0 or count(hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.50'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-94| Sezione Encounters: la sezione deve contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.50'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='46240-8']])=0 or count(hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:text)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='46240-8']])=0 or count(hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:text)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-95| Sezione Encounters: la sezione deve contenere l'elemento 'text'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='46240-8']])=0 or count(hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:entry)>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='46240-8']])=0 or count(hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:entry)>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-96| Sezione Encounters: la sezione deve contenere almeno un elemento 'entry'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='8648-8']])=0 or count(hl7:component/hl7:section[hl7:code[@code='8648-8']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.23'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='8648-8']])=0 or count(hl7:component/hl7:section[hl7:code[@code='8648-8']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.23'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-97| Sezione Decorso Ospedaliero: la sezione deve contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.23'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='8648-8']])=0 or count(hl7:component/hl7:section[hl7:code[@code='8648-8']]/hl7:text)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='8648-8']])=0 or count(hl7:component/hl7:section[hl7:code[@code='8648-8']]/hl7:text)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-98| Sezione Decorso Ospedaliero: la sezione deve contenere l'elemento 'text'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='55109-3']])=0 or count(hl7:component/hl7:section[hl7:code[@code='55109-3']]/hl7:text)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='55109-3']])=0 or count(hl7:component/hl7:section[hl7:code[@code='55109-3']]/hl7:text)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-99| Sezione Complicanze: la sezione deve contenere l'elemento 'text'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='62387-6']])=0 or count(hl7:component/hl7:section[hl7:code[@code='62387-6']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.26'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='62387-6']])=0 or count(hl7:component/hl7:section[hl7:code[@code='62387-6']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.26'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-100| Sezione Interventi, Prestazioni, Consulenze e Richieste: la sezione deve contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.26'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='62387-6']])=0 or count(hl7:component/hl7:section[hl7:code[@code='62387-6']]/hl7:text)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='62387-6']])=0 or count(hl7:component/hl7:section[hl7:code[@code='62387-6']]/hl7:text)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-101| Sezione Interventi, Prestazioni, Consulenze e Richieste: la sezione deve contenere l'elemento 'text'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='30954-2']])=0 or count(hl7:component/hl7:section[hl7:code[@code='30954-2']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.27'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='30954-2']])=0 or count(hl7:component/hl7:section[hl7:code[@code='30954-2']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.27'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-102| Sezione Accertamenti: la sezione deve contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.27'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='30954-2']])=0 or count(hl7:component/hl7:section[hl7:code[@code='30954-2']]/hl7:text)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='30954-2']])=0 or count(hl7:component/hl7:section[hl7:code[@code='30954-2']]/hl7:text)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-103| Sezione Accertamenti: Ll sezione deve contenere l'elemento 'text'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='8716-3']])=0 or count(hl7:component/hl7:section[hl7:code[@code='8716-3']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.28'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='8716-3']])=0 or count(hl7:component/hl7:section[hl7:code[@code='8716-3']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.28'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-104| Sezione Parametri Vitali: la sezione deve contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.28'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='8716-3']])=0 or count(hl7:component/hl7:section[hl7:code[@code='8716-3']]/hl7:text)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='8716-3']])=0 or count(hl7:component/hl7:section[hl7:code[@code='8716-3']]/hl7:text)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-105| Sezione Parametri Vitali: la sezione deve contenere l'elemento 'text'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='29549-3']])=0 or count(hl7:component/hl7:section[hl7:code[@code='29549-3']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.29'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='29549-3']])=0 or count(hl7:component/hl7:section[hl7:code[@code='29549-3']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.29'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-106| Sezione Terapia farmacologica in Pronto Soccorso: la sezione deve contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.29'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='29549-3']])=0 or count(hl7:component/hl7:section[hl7:code[@code='29549-3']]/hl7:text)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='29549-3']])=0 or count(hl7:component/hl7:section[hl7:code[@code='29549-3']]/hl7:text)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-107| Sezione Terapia farmacologica in Pronto Soccorso: la sezione deve contenere l'elemento 'text'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='18776-5']])=0 or count(hl7:component/hl7:section[hl7:code[@code='18776-5']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.34'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='18776-5']])=0 or count(hl7:component/hl7:section[hl7:code[@code='18776-5']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.34'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-108| Sezione Piano di cura alla dimissione: la sezione deve contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.34'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='18776-5']])=0 or count(hl7:component/hl7:section[hl7:code[@code='18776-5']]/hl7:text)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='18776-5']])=0 or count(hl7:component/hl7:section[hl7:code[@code='18776-5']]/hl7:text)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-109| Sezione Piano di cura alla dimissione: la sezione deve contenere l'elemento 'text'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='75311-1']])=0 or count(hl7:component/hl7:section[hl7:code[@code='75311-1']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.74'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='75311-1']])=0 or count(hl7:component/hl7:section[hl7:code[@code='75311-1']]/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.74'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-110| Sezione Terapia farmacologica alla dimissione: la sezione deve contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.74'.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:component/hl7:section[hl7:code[@code='75311-1']])=0 or count(hl7:component/hl7:section[hl7:code[@code='75311-1']]/hl7:text)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:component/hl7:section[hl7:code[@code='75311-1']])=0 or count(hl7:component/hl7:section[hl7:code[@code='75311-1']]/hl7:text)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-111| Sezione Terapia farmacologica alla dimissione: la sezione deve contenere l'elemento 'text'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section" mode="M3" priority="1057">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section" />
+    <xsl:variable name="codice" select="hl7:code/@code" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:code[@code='11459-5'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='46239-0'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='54094-8'][@codeSystem='2.16.840.1.113883.6.1'])=1     or count(hl7:code[@code='78337-3'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='46240-8'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='8648-8'][@codeSystem='2.16.840.1.113883.6.1'])=1     or count(hl7:code[@code='55109-3'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='62387-6'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='30954-2'][@codeSystem='2.16.840.1.113883.6.1'])=1      or count(hl7:code[@code='8716-3'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='29549-3'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='28574-2'][@codeSystem='2.16.840.1.113883.6.1'])=1    or count(hl7:code[@code='18776-5'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='75311-1'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:code[@code='11459-5'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='46239-0'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='54094-8'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='78337-3'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='46240-8'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='8648-8'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='55109-3'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='62387-6'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='30954-2'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='8716-3'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='29549-3'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='28574-2'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='18776-5'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:code[@code='75311-1'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-112| Il codice '<xsl:text />
+            <xsl:value-of select="$codice" />
+            <xsl:text />' non è corretto. La sezione deve essere valorizzata con uno dei seguenti codici:
+			11459-5 Sezione Motivo di trasporto
+			46239-0	Sezione Motivo della visita
+			54094-8	Sezione Triage
+			78337-3 Sezione Inquadramentoclinico iniziale
+			46240-8 Sezione Encounters
+			8648-8  Sezione Decorso ospedaliero
+			55109-3 Sezione Complicanze
+			62387-6 Sezione Interventi, prestazioni, consulenze e richieste
+			30954-2 Sezione Accertamenti
+			8716-3  Sezione Parametri vitali
+			29549-3 Sezione Terapia farmacologica in pronto soccorso
+			18776-5 Sezione Piano di cura alla dimissione
+			75311-1 Sezione Terapia farmacologica alla dimissione
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='11459-5']]/hl7:entry" mode="M3" priority="1056">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='11459-5']]/hl7:entry" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.40'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.40'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-113| Sezione Modalità di trasporto: l'elemento entry/act DEVE contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.40'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:code[@codeSystem='2.16.840.1.113883.2.9.6.1.54.6'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:code[@codeSystem='2.16.840.1.113883.2.9.6.1.54.6'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-114| Sezione Modalità di trasporto: l'elemento entry/act/code DEVE avere l'attributo @codeSystem con '2.16.840.1.113883.2.9.6.1.54.6'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-115| Sezione Modalità di trasporto: l'elemento entry/act/statusCode  DEVE  assumere il valore 'completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:participant/hl7:participantRole/hl7:code[@codeSystem='2.16.840.1.113883.2.9.6.1.54.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:participant/hl7:participantRole/hl7:code[@codeSystem='2.16.840.1.113883.2.9.6.1.54.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-116| Sezione Modalità di trasporto: l'elemento entry/act/participant/participantRole DEVE contenere l'elemento code valorizzato con l'attributo @codeSystem='2.16.840.1.113883.2.9.6.1.54.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='54094-8']]/hl7:entry" mode="M3" priority="1055">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='54094-8']]/hl7:entry" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.39'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.39'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-117| Sezione Triage: l'elemento entry/observation DEVE contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.39'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:code[@code='11283-9'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:code[@code='11283-9'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-118| Sezione Triage: l'elemento entry/observation/code deve avere l'attributo @code valorizzato con '11283-9' e l'attributo @codeSystem con '2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-119| Sezione Triage: l'elemento entry/observation/statusCode  DEVE  assumere il valore 'completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.2.9.6.1.54.4'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.2.9.6.1.54.4'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-120| Sezione Triage: l'elemento entry/observation/value DEVE essere valorizzato col value set CodiceTriage_VPS</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='54094-8']]/hl7:entry/hl7:observation/hl7:performer" mode="M3" priority="1054">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='54094-8']]/hl7:entry/hl7:observation/hl7:performer" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:given)=1 and      count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:family)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:family)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-121|Sezione Triage: entry/observation/performer/assignedEntity/assignedPerson/name deve contenere gli elementi "given" e "family" </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component" mode="M3" priority="1053">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.55']])=0 or count(hl7:section/hl7:code[@code='11329-0'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.55']])=0 or count(hl7:section/hl7:code[@code='11329-0'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-122| Sotto-sezione Anamnesi: deve contenere l'elemento code con attributi @code='11329-0' e @codeSystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.55']])=0 or     count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.55']]/hl7:text)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.55']])=0 or count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.55']]/hl7:text)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-123| Sotto-sezione Anamnesi: deve contenere l'elemento 'text'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.58']])=0 or     count(hl7:section/hl7:code[@code='29545-1'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.58']])=0 or count(hl7:section/hl7:code[@code='29545-1'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-124| Sotto-sezione Esame obiettivo: deve contenere l'elemento code con attributi @code='29545-1' e @codeSystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.58']])=0 or     count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.58']]/hl7:text)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.58']])=0 or count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.58']]/hl7:text)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-125| Sotto-sezione Esame obiettivo: deve contenere l'elemento 'text'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.57']])=0 or count(hl7:section/hl7:code[@code='42346-7'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.57']])=0 or count(hl7:section/hl7:code[@code='42346-7'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-126| Sotto-sezione Terapie farmacologiche all'ingresso: deve contenere l'elemento code con attributi @code='42346-7' e @codeSystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.57']])=0 or     count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.57']]/hl7:text)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.57']])=0 or count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.57']]/hl7:text)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-127| Sotto-sezione Terapie farmacologiche all'ingresso: deve contenere l'elemento 'text'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.33']])=0 or count(hl7:section/hl7:code[@code='48765-2'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.33']])=0 or count(hl7:section/hl7:code[@code='48765-2'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-128| Sotto-sezione Allergie: deve contenere l'elemento code con attributi @code='48765-2' e @codeSystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.33']])=0 or     count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.33']]/hl7:text)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.33']])=0 or count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.33']]/hl7:text)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-129| Sotto-sezione Allergie: deve contenere l'elemento 'text'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.59']])=0 or count(hl7:section/hl7:code[@code='11450-4'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.59']])=0 or count(hl7:section/hl7:code[@code='11450-4'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-130| Sotto-sezione Problemi aperti: deve contenere l'elemento code con attributi @code='11450-4' e @codeSystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.59']])=0 or     count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.59']]/hl7:text)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.59']])=0 or count(hl7:section[hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.59']]/hl7:text)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-131| Sotto-sezione Problemi aperti: deve contenere l'elemento 'text'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:author" mode="M3" priority="1052">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:author" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or    (count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or (count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-132| Sezione Inquadramento clinico iniziale: l'elemento section/author/assignedAuthor/assignedPerson/name deve contenere i sotto elementi 'given' e 'family'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='11329-0']]/hl7:author" mode="M3" priority="1051">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='11329-0']]/hl7:author" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or     (count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or (count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-133| Sotto-sezione Anamnesi: deve contenere l'elemento author/assignedAuthor/assignedPerson/name con i sotto-elementi 'given' e 'family' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='29545-1']]/hl7:author" mode="M3" priority="1050">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='29545-1']]/hl7:author" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or     (count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or (count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-134| Sotto-sezione Esame obiettivo: deve contenere l'elemento author/assignedAuthor/assignedPerson/name con i sotto-elementi 'given' e 'family'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='42346-7']]/hl7:author" mode="M3" priority="1049">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='42346-7']]/hl7:author" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or     (count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or (count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-135| Sotto-sezione Terapie in essere: deve contenere l'elemento author/assignedAuthor/assignedPerson/name con i sotto-elementi 'given' e 'family'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='48765-2']]/hl7:author" mode="M3" priority="1048">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='48765-2']]/hl7:author" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or     (count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or (count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-136| Sotto-sezione Allergie: deve contenere l'elemento author/assignedAuthor/assignedPerson/name con i sotto-elementi 'given' e 'family'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='11450-4']]/hl7:author" mode="M3" priority="1047">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='11450-4']]/hl7:author" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or     (count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or (count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-137| Sotto-sezione Problemi aperti: deve contenere l'elemento author/assignedAuthor/assignedPerson/name con i sotto-elementi 'given' e 'family'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='11329-0']]/hl7:entry" mode="M3" priority="1046">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='11329-0']]/hl7:entry" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation)=1 or count(hl7:organizer)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation)=1 or count(hl7:organizer)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-138| Sotto-sezione Anamnesi: l'elemento 'entry' deve avere uno dei seguenti sotto elementi:
+				- 'observation': per l'Anamnesi patologica e fisiologica;
+				- 'organizer': per l'Anamnesi familiare.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation)=0 or count(hl7:observation/hl7:code[@code='75326-9'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation)=0 or count(hl7:observation/hl7:code[@code='75326-9'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-139| Sotto-sezione Anamnesi: l'elemento entry/observation/code deve avere gli attributi @code='75326-9' e @codeSystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation)=0 or count(hl7:observation/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation)=0 or count(hl7:observation/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-140| Sotto-sezione Anamnesi: l'elemento entry/observation/statusCode deve avere l'attributo @code='completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation)=0 or count(hl7:observation/hl7:effectiveTime/hl7:low)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation)=0 or count(hl7:observation/hl7:effectiveTime/hl7:low)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-141| Sotto-sezione Anamnesi: l'elemento entry/observation/effectiveTime deve essere presente e deve avere l'elemento 'low' valorizzato</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(hl7:observation)=0 or count(hl7:observation/hl7:entryRelationship/hl7:observation[hl7:code[@code='33999-4']])=0) or      (count(hl7:observation/hl7:entryRelationship/hl7:observation[hl7:code[@code='33999-4']]/hl7:value[@code='LA18632-2'])=1 and      count(hl7:observation/hl7:effectiveTime/hl7:high)=1) or count(hl7:observation/hl7:effectiveTime/hl7:high)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(hl7:observation)=0 or count(hl7:observation/hl7:entryRelationship/hl7:observation[hl7:code[@code='33999-4']])=0) or (count(hl7:observation/hl7:entryRelationship/hl7:observation[hl7:code[@code='33999-4']]/hl7:value[@code='LA18632-2'])=1 and count(hl7:observation/hl7:effectiveTime/hl7:high)=1) or count(hl7:observation/hl7:effectiveTime/hl7:high)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-142| Sotto-sezione Anamnesi: l'elemento entry/observation/effectiveTime deve essere presente e deve avere l'elemento 'high' valorizzato</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation)=0 or count(hl7:observation/hl7:value[@xsi:type='CD'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation)=0 or count(hl7:observation/hl7:value[@xsi:type='CD'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-143| Sotto-sezione Anamnesi: l'elemento entry/observation/value deve avere l'attributo @xsi:type="CD" </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation)=0 or (count(hl7:observation/hl7:value/@code)=0 and count(hl7:observation/hl7:value/hl7:originalText/hl7:reference)=1)     or (count(hl7:observation/hl7:value/@code)=1 and count(hl7:observation/hl7:value/hl7:originalText/hl7:reference)&lt;=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation)=0 or (count(hl7:observation/hl7:value/@code)=0 and count(hl7:observation/hl7:value/hl7:originalText/hl7:reference)=1) or (count(hl7:observation/hl7:value/@code)=1 and count(hl7:observation/hl7:value/hl7:originalText/hl7:reference)&lt;=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-144| Sotto-sezione Anamnesi: nel caso di entry/observation/value non codificato, deve essere valorizzato l'elemento 'originalText/reference'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation)=0 or (count(hl7:observation/hl7:entryRelationship[hl7:observation/hl7:code[@code='89261-2']])&lt;=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation)=0 or (count(hl7:observation/hl7:entryRelationship[hl7:observation/hl7:code[@code='89261-2']])&lt;=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-145| Sotto-sezione Anamnesi: l'entry/observation può contenere al più una entryRelationship relativa alla Cronicità</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation)=0 or (count(hl7:observation/hl7:entryRelationship[hl7:observation/hl7:code[@code='33999-4']])&lt;=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation)=0 or (count(hl7:observation/hl7:entryRelationship[hl7:observation/hl7:code[@code='33999-4']])&lt;=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-146| Sotto-sezione Anamnesi: l'entry/observation può contenere al più una 'entryRelationship' relativa allo Stato Clinico del problema</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:organizer)=0 or count(hl7:organizer[@classCode='CLUSTER'])=1 and count(hl7:organizer/@moodCode)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:organizer)=0 or count(hl7:organizer[@classCode='CLUSTER'])=1 and count(hl7:organizer/@moodCode)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-147| Sotto-sezione Anamnesi: l'elemento entry/organizer deve avere gli attributi @classCode='CLUSTER' e @moodCode='EVN'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:organizer)=0 or count(hl7:organizer/hl7:code[@code='10157-6'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:organizer)=0 or count(hl7:organizer/hl7:code[@code='10157-6'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-148| Sotto-sezione Anamnesi: l'elemento entry/organizer/code deve avere gli attributi @code='10157-6' e @codeSystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:organizer)=0 or count(hl7:organizer/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:organizer)=0 or count(hl7:organizer/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-149| Sotto-sezione Anamnesi: l'elemento entry/organizer/statusCode deve avere l'attributo @code='completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:organizer)=0 or count(hl7:organizer/hl7:effectiveTime)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:organizer)=0 or count(hl7:organizer/hl7:effectiveTime)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-150| Sotto-sezione Anamnesi: l'elemento entry/organizer/effectiveTime deve essere presente</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:organizer)=0 or count(hl7:organizer/hl7:subject/hl7:relatedSubject[@classCode='PRS'])=1 and      count(hl7:organizer/hl7:subject/hl7:relatedSubject/hl7:code[@codeSystem='2.16.840.1.113883.5.111'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:organizer)=0 or count(hl7:organizer/hl7:subject/hl7:relatedSubject[@classCode='PRS'])=1 and count(hl7:organizer/hl7:subject/hl7:relatedSubject/hl7:code[@codeSystem='2.16.840.1.113883.5.111'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-151| Sotto-sezione Anamnesi: l'elemento entry/organizer/subject/relatedSubject deve avere l'attributo @classCode='PRS' e deve contenere l'elemento 'code'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:organizer)=0 or count(hl7:organizer/hl7:component)>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:organizer)=0 or count(hl7:organizer/hl7:component)>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-152| Sotto-sezione Anamnesi: l'elemento entry/organizer deve contenere almeno un elelemento component di tipo observation.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='11329-0']]/hl7:entry/hl7:observation/hl7:entryRelationship" mode="M3" priority="1045">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='11329-0']]/hl7:entry/hl7:observation/hl7:entryRelationship" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(hl7:observation/hl7:code[@code='89261-2'][@codeSystem='2.16.840.1.113883.6.1'])=1 or      count(hl7:observation/hl7:code[@code='33999-4'][@codeSystem='2.16.840.1.113883.6.1'])=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(hl7:observation/hl7:code[@code='89261-2'][@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:observation/hl7:code[@code='33999-4'][@codeSystem='2.16.840.1.113883.6.1'])=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-153| Sotto-sezione Anamnesi: l'elemento entry/observation/entryRelationship/observation/code deve avere l'attributo @code valorizzato con:
+					"89261-2" per "Cronicità patologia";
+					"33999-4" per "Stato clinico patologia"
+					</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation[hl7:code[@code='89261-2']]/hl7:value)=0 or       (count(hl7:observation[hl7:code[@code='89261-2']]/hl7:value[@codeSystem='2.16.840.1.113883.6.1'])=1 or       count(hl7:observation[hl7:code[@code='89261-2']]/hl7:value[@codeSystem='2.16.840.1.113883.2.9.77.22.11.10'])=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation[hl7:code[@code='89261-2']]/hl7:value)=0 or (count(hl7:observation[hl7:code[@code='89261-2']]/hl7:value[@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:observation[hl7:code[@code='89261-2']]/hl7:value[@codeSystem='2.16.840.1.113883.2.9.77.22.11.10'])=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-154| Sotto-sezione Anamnesi: l'elemento entry/observation/entryRelationship/observation/value relativo alla Cronicità deve essere valorizzato secondo il Value set "CronicitàProblema"</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation[hl7:code[@code='33999-4']]/hl7:value)=0 or       (count(hl7:observation[hl7:code[@code='33999-4']]/hl7:value[@codeSystem='2.16.840.1.113883.6.1'])=1 or       count(hl7:observation[hl7:code[@code='33999-4']]/hl7:value[@codeSystem='2.16.840.1.113883.2.9.77.22.11.7'])=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation[hl7:code[@code='33999-4']]/hl7:value)=0 or (count(hl7:observation[hl7:code[@code='33999-4']]/hl7:value[@codeSystem='2.16.840.1.113883.6.1'])=1 or count(hl7:observation[hl7:code[@code='33999-4']]/hl7:value[@codeSystem='2.16.840.1.113883.2.9.77.22.11.7'])=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-155| Sotto-sezione Anamnesi: l'elemento entry/observation/entryRelationship/observation/value relativo allo Stato Clinico della patologia deve essere valorizzato secondo il Value set "StatoClinicoProblema"</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='11329-0']]/hl7:entry/hl7:organizer/hl7:component" mode="M3" priority="1044">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='11329-0']]/hl7:entry/hl7:organizer/hl7:component" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:code[@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:code[@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-156| Sotto-sezione Anamnesi: l'elemento entry/organizer/component/observation/code deve avere l'attributo @codeSystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-157| Sotto-sezione Anamnesi: l'elemento entry/organizer/component/observation/statusCode deve avere l'attributo @code='completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:effectiveTime)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:effectiveTime)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-158| Sotto-sezione Anamnesi: l'elemento entry/organizer/component/observation/effectiveTime deve essere presente </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.6.103'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.6.103'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-159| Sotto-sezione Anamnesi: l'elemento entry/organizer/component/observation/value deve essere presente e valorizzato secondo il @codeSystem='2.16.840.1.113883.6.103' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:entryRelationship[hl7:observation/hl7:code[@code='35267-4']])>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:entryRelationship[hl7:observation/hl7:code[@code='35267-4']])>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-160| Sotto-sezione Anamnesi: l'elemento entry/organizer/component/observation deve contenere almeno una entryRelationship relativo all'Età di insorgenza. </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:entryRelationship[hl7:observation/hl7:code[@code!='35267-4']])=1 and       count(hl7:observation/hl7:entryRelationship[hl7:observation/hl7:code[@code='39016-1']])=1 and       count(hl7:observation/hl7:entryRelationship/hl7:observation[hl7:code[@code='39016-1']]/hl7:value)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:entryRelationship[hl7:observation/hl7:code[@code!='35267-4']])=1 and count(hl7:observation/hl7:entryRelationship[hl7:observation/hl7:code[@code='39016-1']])=1 and count(hl7:observation/hl7:entryRelationship/hl7:observation[hl7:code[@code='39016-1']]/hl7:value)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-161| Sotto-sezione Anamnesi: l'elemento entry/organizer/component/observation/entryRelationship/observation deve avere il code valorizzato con @code='39016-1' e deve contenere un elemento 'value'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='11329-0']]/hl7:entry/hl7:organizer/hl7:component/hl7:observation/hl7:entryRelationship[hl7:observation/hl7:code[@code='35267-4']]" mode="M3" priority="1043">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='11329-0']]/hl7:entry/hl7:organizer/hl7:component/hl7:observation/hl7:entryRelationship[hl7:observation/hl7:code[@code='35267-4']]" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:value)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:value)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-162| Sotto-sezione Anamnesi: l'elemento entry/organizer/component/observation/entryRelationship/observation deve contenere l'elemento value </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='48765-2']]/hl7:entry" mode="M3" priority="1042">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='48765-2']]/hl7:entry" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act[@classCode='ACT'][@moodCode='EVN'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act[@classCode='ACT'][@moodCode='EVN'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-163| Sezione Allergie: la sezione deve contenere un elemento entry di tipo 'act'con attributi @classCode='ACT' e @moodCode='EVN'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:effectiveTime/hl7:low)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:effectiveTime/hl7:low)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-164| Sezione Allergie: l'elemento entry/act/effectiveTime deve essere presente e deve avere l'elemento 'low' valorizzato</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="status" select="hl7:act/hl7:statusCode/@code" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="($status='completed' and count(hl7:act/hl7:effectiveTime/hl7:high)=1) or       ($status='aborted' and count(hl7:act/hl7:effectiveTime/hl7:high)=1) or        ($status='suspended' and count(hl7:act/hl7:effectiveTime/hl7:high)=0) or        ($status='active' and count(hl7:act/hl7:effectiveTime/hl7:high)=0)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="($status='completed' and count(hl7:act/hl7:effectiveTime/hl7:high)=1) or ($status='aborted' and count(hl7:act/hl7:effectiveTime/hl7:high)=1) or ($status='suspended' and count(hl7:act/hl7:effectiveTime/hl7:high)=0) or ($status='active' and count(hl7:act/hl7:effectiveTime/hl7:high)=0)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-165| Sezione Allergie: l'elemento entry/act/effectiveTime/high deve essere presente nel caso in cui lo 'statusCode' sia 'completed'oppure'aborted'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:code[@code='52473-6'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:code[@code='52473-6'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-166| Sezione Allergie: l'entry/act deve includere uno ed uno solo elemento entryRelationship/observation con attributo @code='52473-6'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:text)=0 or         count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:text/hl7:reference/@value)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:text)=0 or count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:text/hl7:reference/@value)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-167| Sezione Allergie: l'entry/act/entryRelationship/observation/text/reference/value deve essere valorizzato con l'URI che punta alla descrizione di allarme, allergia o intolleranza nel narrative block della sezione </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-168| Sezione Allergie: l'elemento entry/act/entryRelationship/observation/statusCode/@code deve assumere il valore costante 'completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:effectiveTime/hl7:low)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:effectiveTime/hl7:low)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-169| Sezione Allergie: l'elemento entry/act/entryRelationship/observation/effectiveTime deve essere presente e deve avere l'elemento 'low' valorizzato </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:value[@xsi:type='CD'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:value[@xsi:type='CD'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-170| Sezione Allergie: l'elemento entry/act/entryRelationship/observation/value deve avere l'attributo @xsi:type='CD'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:value/@code)=0 or         count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.5.4'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:value/@code)=0 or count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.5.4'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-171| Sezione Allergie: l'elemento entry/act/entryRelationship/observation/value codificato, deve avere l'attributo @code valorizzato secondo il value set "ObservationIntoleranceType" - @codeSystem='2.16.840.1.113883.5.4'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:value/@code)=0 and      count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:value/hl7:originalText/hl7:reference)=1) or      (hl7:act/hl7:entryRelationship/count(hl7:observation/hl7:value/@code)=1 and      count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:value/hl7:originalText/hl7:reference)&lt;=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:value/@code)=0 and count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:value/hl7:originalText/hl7:reference)=1) or (hl7:act/hl7:entryRelationship/count(hl7:observation/hl7:value/@code)=1 and count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:value/hl7:originalText/hl7:reference)&lt;=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-172| Sezione Allergie: l'elemento entry/act/entryRelationship/observation/value non codificato, deve avere l'elemento originalText/reference valorizzato, altrimenti l'elemento originalText/reference può non essere presente</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:participant)>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:participant)>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-173| Sezione Allergie: entry/act/entryRelationship/observation deve contenere almeno un elemento 'participant'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:entryRelationship[@typeCode='SUBJ'][hl7:observation])&lt;=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:entryRelationship[@typeCode='SUBJ'][hl7:observation])&lt;=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-174| Sezione Allergie: entry/act/entryRelationship/observation deve contenere solo un elemento 'entryRelationship/observation' relativo alla Criticità</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:entryRelationship[@typeCode='REFR'])&lt;=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:entryRelationship[@typeCode='REFR'])&lt;=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-175| Sezione Allergie: entry/act/entryRelationship/observation deve contenere solo un elemento 'entryRelationship/observation' relativo allo Stato dell'allergia</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:entryRelationship[@typeCode='SUBJ'][hl7:act])&lt;=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(hl7:act/hl7:entryRelationship/hl7:observation/hl7:entryRelationship[@typeCode='SUBJ'][hl7:act])&lt;=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-176| Sezione Allergie: entry/act/entryRelationship/observation deve contenere solo un elemento 'entryRelationship/act' relativo ai Commenti</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='48765-2']]/hl7:entry/hl7:act/hl7:entryRelationship/hl7:observation/hl7:participant" mode="M3" priority="1041">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='48765-2']]/hl7:entry/hl7:act/hl7:entryRelationship/hl7:observation/hl7:participant" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:playingEntity/hl7:code[@codeSystem='2.16.840.1.113883.6.73'])=1 or      count(hl7:participantRole/hl7:playingEntity/hl7:code[@codeSystem='2.16.840.1.113883.2.9.6.1.5'])=1 or      count(hl7:participantRole/hl7:playingEntity/hl7:code[@codeSystem='2.16.840.1.113883.2.9.77.22.11.2'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:playingEntity/hl7:code[@codeSystem='2.16.840.1.113883.6.73'])=1 or count(hl7:participantRole/hl7:playingEntity/hl7:code[@codeSystem='2.16.840.1.113883.2.9.6.1.5'])=1 or count(hl7:participantRole/hl7:playingEntity/hl7:code[@codeSystem='2.16.840.1.113883.2.9.77.22.11.2'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-177| Sezione Allergie (descrizione agente codificato): l'elemento entry/act/entryRelationship/observation/participant/participantRole/playingEntity deve avere l'attributo code/@codeSystem valorizzato come segue:
+					- '2.16.840.1.113883.6.73' codifica "WHO ATC"
+					- '2.16.840.1.113883.2.9.6.1.5' codifica "AIC"
+					- '2.16.840.1.113883.2.9.77.22.11.2' value set "AllergenNoDrugs" (- per le allergie non a farmaci –)
+					</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='48765-2']]/hl7:entry/hl7:act/hl7:entryRelationship/hl7:observation/hl7:entryRelationship[@typeCode='MFST']" mode="M3" priority="1040">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='48765-2']]/hl7:entry/hl7:act/hl7:entryRelationship/hl7:observation/hl7:entryRelationship[@typeCode='MFST']" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:code[@code='75321-0'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:code[@code='75321-0'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-178| Sezione Allergie (descrizione reazione): entry/act/entryRelationship/observation/entryRelationship/observation deve avere un elemento 'code' con gli attributi @code=75321-0' e @codeSystem='2.16.840.1.113883.6.1' e @displayName='Obiettività Clinica'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:effectiveTime/hl7:low)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:effectiveTime/hl7:low)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-179| Sezione Allergie (descrizione reazione): entry/act/entryRelationship/observation/entryRelationship/observation deve avere un 'effectiveTime' che contiene l'elemento 'low' valorizzato </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:value)=0 or count(hl7:observation/hl7:value[@xsi:type='CD'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:value)=0 or count(hl7:observation/hl7:value[@xsi:type='CD'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-180| Sezione Allergie (descrizione reazione): l'elemento entry/act/entryRelationship/observation/entryRelationship/observation/value deve avere l'attributo @xsi:type='CD'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:value)=0 or         (count(hl7:observation/hl7:value/@code)=0 and count(hl7:observation/hl7:value/hl7:originalText/hl7:reference)=1) or         (count(hl7:observation/hl7:value/@code)=1 and (count(hl7:observation/hl7:value/hl7:originalText/hl7:reference)&lt;=1))" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:value)=0 or (count(hl7:observation/hl7:value/@code)=0 and count(hl7:observation/hl7:value/hl7:originalText/hl7:reference)=1) or (count(hl7:observation/hl7:value/@code)=1 and (count(hl7:observation/hl7:value/hl7:originalText/hl7:reference)&lt;=1))">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-181| Sezione Allergie (descrizione reazione): nel caso di entry/act/entryRelationship/observation/entryRelationship/observation/value non codificato, questi deve avere l'elemento originalText/reference valorizzato</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:value/@code)=0 or         (count(hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.2.9.77.22.11.4'])=1 or          count(hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.2.9.77.22.11.3'])=1 or          count(hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.6.103'])=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:value/@code)=0 or (count(hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.2.9.77.22.11.4'])=1 or count(hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.2.9.77.22.11.3'])=1 or count(hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.6.103'])=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-182| Sezione Allergie (descrizione reazione): entry/act/entryRelationship/observation/entryRelationship/observation/value deve avere l'attributo @codeSystem valorizzato come segue:
+					- "2.16.840.1.113883.2.9.77.22.11.4" per le reazioni da allergia 
+					- "2.16.840.1.113883.2.9.77.22.11.3" per le reazioni da intolleranza 
+					- "2.16.840.1.113883.6.103" per le reazioni riportate nel sistema ICD-9-CM
+					</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='48765-2']]/hl7:entry/hl7:act/hl7:entryRelationship/hl7:observation/hl7:entryRelationship[@typeCode='SUBJ'][hl7:observation]" mode="M3" priority="1039">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='48765-2']]/hl7:entry/hl7:act/hl7:entryRelationship/hl7:observation/hl7:entryRelationship[@typeCode='SUBJ'][hl7:observation]" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:code[@codeSystem='2.16.840.1.113883.5.4'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:code[@codeSystem='2.16.840.1.113883.5.4'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-183| Sezione Allergie (criticità dell'allergia o intolleranza): entry/act/entryRelationship/observation/entryRelationship/observation/code deve avere l'attributo @codesystem='2.16.840.1.113883.5.4'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:text)=0 or count(hl7:observation/hl7:text/hl7:reference/@value)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:text)=0 or count(hl7:observation/hl7:text/hl7:reference/@value)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-184| Sezione Allergie (criticità dell'allergia o intolleranza): entry/act/entryRelationship/observation/entryRelationship/observation/text/reference/value deve essere valorizzato con l'URI che punta alla descrizione della severità nel narrative block della sezione </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.5.1063'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.5.1063'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-185| Sezione Allergie (criticità dell'allergia o intolleranza): entry/act/entryRelationship/observation/entryRelationship/observation/value deve essere valorizzato secondo il value set "CriticalityObservation" @codesystem='2.16.840.1.113883.5.1063'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='48765-2']]/hl7:entry/hl7:act/hl7:entryRelationship/hl7:observation/hl7:entryRelationship[@typeCode='REFR']" mode="M3" priority="1038">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='48765-2']]/hl7:entry/hl7:act/hl7:entryRelationship/hl7:observation/hl7:entryRelationship[@typeCode='REFR']" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:code[@code='33999-4'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:code[@code='33999-4'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-186| Sezione Allergie (stato dell'allergia): entry/act/entryRelationship/observation/entryRelationship/observation/code deve avere l'attributo @code='33999-4' e @codesystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-187| Sezione Allergie (stato dell'allergia): entry/act/entryRelationship/observation/entryRelationship/observation/value deve essere valorizzato secondo il value set "StatoClinicoAllergia" (@codesystem='2.16.840.1.113883.6.1')</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='48765-2']]/hl7:entry/hl7:act/hl7:entryRelationship/hl7:observation/hl7:entryRelationship[@typeCode='SUBJ'][hl7:act]" mode="M3" priority="1037">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='78337-3']]/hl7:component/hl7:section[hl7:code[@code='48765-2']]/hl7:entry/hl7:act/hl7:entryRelationship/hl7:observation/hl7:entryRelationship[@typeCode='SUBJ'][hl7:act]" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:code[@code='48767-8'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:code[@code='48767-8'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-188| Sezione Allergie (commenti): l'elemento entry/act/entryRelationship/observation/entryRelationship/act deve contenere l'elemento act con attributi @code='48767-8' e @codeSystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:entry" mode="M3" priority="1036">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:entry" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:encounter/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.51'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:encounter/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.51'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-189| Sezione Encounters: L'elemento entry/encounters DEVE contenere l'elemento templateId valorizzato con l'atttributo @root='2.16.840.1.113883.2.9.10.1.6.51'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:encounter/hl7:code[@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.4'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:encounter/hl7:code[@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.4'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-190| Sezione Encounters: L'elemento entry/encounters/code DEVE avere l'attributo @codeSystem valorizzato col value set TipoEncounters_VPS.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:encounter/hl7:effectiveTime/hl7:low)=1 and count(hl7:encounter/hl7:effectiveTime/hl7:high)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:encounter/hl7:effectiveTime/hl7:low)=1 and count(hl7:encounter/hl7:effectiveTime/hl7:high)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-191| Sezione Encounters: L'elemento entry/encounters/effectiveTime deve essere presente e deve avere gli elementi 'low' e 'high' valorizzati.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:entry/hl7:encounter/hl7:participant[@typeCode='ADM']" mode="M3" priority="1035">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:entry/hl7:encounter/hl7:participant[@typeCode='ADM']" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:id)>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:id)>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-192| Sezione Encounters: l'elemento entry/encounter/participant DEVE contenere almeno un participantRole</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:playingEntity)=0 or      count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1 and count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:family)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:playingEntity)=0 or count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1 and count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:family)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-193| Sezione Encounters: l'elemento entry/encounter/participant/participantRole/playingEntity/name DEVE contenere gli elementi 'family' e 'given'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:entry/hl7:encounter/hl7:participant[@typeCode='ATND']" mode="M3" priority="1034">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:entry/hl7:encounter/hl7:participant[@typeCode='ATND']" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:id)>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:id)>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-194| Sezione Encounters: l'elemento entry/encounter/participant DEVE contenere l'elemento patientRole caratterizzato da un id obbligatorio</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:playingEntity)=0 or      count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1 and count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:family)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:playingEntity)=0 or count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1 and count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:family)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-195| Sezione Encounters: l'elemento entry/encounter/participant/participantRole/playingEntity/name DEVE contenere gli elementi 'family' e 'given'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:entry/hl7:encounter/hl7:participant[@typeCode='DIS']" mode="M3" priority="1033">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:entry/hl7:encounter/hl7:participant[@typeCode='DIS']" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:id)>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:id)>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-196| Sezione Encounters: l'elemento entry/encounter/participant DEVE contenere l'elemento participantRole caratterizzato da un id obbligatorio</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:playingEntity)=0 or      count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1 and count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:family)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:playingEntity)=0 or count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1 and count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:family)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-197| Sezione Encounters: l'elemento entry/encounter/participant/participantRole/playingEntity/name DEVE contenere gli elementi 'family' e 'given'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:entry/hl7:encounter/hl7:participant[@typeCode='LOC']" mode="M3" priority="1032">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:entry/hl7:encounter/hl7:participant[@typeCode='LOC']" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.64'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.64'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-198| Sezione Encounters: l'elemento entry/encounter/participant/participantRole DEVE contenere l'elemento templateId valorizzato dall'attributo @root='2.16.840.1.113883.2.9.10.1.6.64'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:code)=0 or count(hl7:participantRole/hl7:code[@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.10'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:code)=0 or count(hl7:participantRole/hl7:code[@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.10'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-199| Sezione Encounters: l'elemento entry/encounter/participant/participant/participantRole/code deve essere valorizzato secondo il value set "TipoLuogo_VPS" - @codeSystem='2.16.840.1.113883.2.9.1.11.1.2.10'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:entry/hl7:encounter/hl7:entryRelationship" mode="M3" priority="1031">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='46240-8']]/hl7:entry/hl7:encounter/hl7:entryRelationship" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act[@classCode='ACT'][@moodCode='EVN'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act[@classCode='ACT'][@moodCode='EVN'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-200| Sezione Encounters: l'elemento act DEVE essere valorizzato con gli attributi @classCode='ACT' e @moodCode='EVN'.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.47'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.47'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-201| Sezione Encounters: l'elemento entry/encounter/entryRelationship/act DEVE contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.47'.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:code[@code='48767-8'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:code[@code='48767-8'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-202| Sezione Encounters: l'elemento entry/encounter/entryRelationship/act/code DEVE essere valorizzato con gli attributi @code='48767-8' e @codeSystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='8648-8']]/hl7:author" mode="M3" priority="1030">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='8648-8']]/hl7:author" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or    (count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or (count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-203| Sezione Decorso Ospedaliero: l'elemento author/assignedAuthor/assignedPerson/name deve contenere i sotto elementi 'given' e 'family'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='55109-3']]/hl7:entry" mode="M3" priority="1029">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='55109-3']]/hl7:entry" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:code[@code='75326-9'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:code[@code='75326-9'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-204| Sezione Complicanze: l'elemento entry/observation/code DEVE essere valorizzato con gli attributi @code='75326-9' e @codeSystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:value[@xsi:type='CD'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:value[@xsi:type='CD'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-205| Sezione Complicanze: l'elemento entry/observation/value DEVE essere valorizzato con l'attributo @xsi:type=CD.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='62387-6']]/hl7:entry" mode="M3" priority="1028">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='62387-6']]/hl7:entry" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act[@classCode='ACT'][@moodCode='EVN'])=1 or count(hl7:act[@classCode='ACT'][@moodCode='RQO'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act[@classCode='ACT'][@moodCode='EVN'])=1 or count(hl7:act[@classCode='ACT'][@moodCode='RQO'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-206| Sezione Interventi Prestazioni Consulenze e Richieste: l'elemento act DEVE essere valorizzato con gli attributi @classCode='ACT' e @moodCode='EVN' o @moodCode='RQO' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.62'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.62'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-207| Sezione Interventi Prestazioni Consulenze e Richieste: l'elemento entry/act DEVE contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.62'.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:code[@code='76645-1'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:code[@code='76645-1'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-208| Sezione Interventi Prestazioni Consulenze e Richieste: l'elemento entry/act/code DEVE essere valorizzato con gli attributi @code='76645-1' e @codeSystem='2.16.840.1.113883.6.1'.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:statusCode[@code='completed'])=1 or count(hl7:observation/hl7:statusCode[@code='aborted'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:statusCode[@code='completed'])=1 or count(hl7:observation/hl7:statusCode[@code='aborted'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-209| Sezione Interventi Prestazioni Consulenze e Richieste: l'elemento entry/act DEVE contenere un elemento statusCode valorizzato con l'attributo @code='completed' o @code='aborted'.  </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:participant)=0 or (count(hl7:act/hl7:participant[@typeCode='REF']))>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:participant)=0 or (count(hl7:act/hl7:participant[@typeCode='REF']))>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-210| Sezione Interventi Prestazioni Consulenze e Richieste: l'elemento entry/act/participant se presente DEVE contenere l'attributo @typeCode='REF'.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='62387-6']]/hl7:entry/hl7:act/hl7:performer" mode="M3" priority="1027">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='62387-6']]/hl7:entry/hl7:act/hl7:performer" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:family)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:family)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-211| Sezione Interventi Prestazioni Consulenze e Richieste: l'elemento entry/act/performer/assignedEntity/assignedPerson/name se presente DEVE contenere gli elementi 'given' e 'family' .</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='62387-6']]/hl7:entry/hl7:act/hl7:participant" mode="M3" priority="1026">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='62387-6']]/hl7:entry/hl7:act/hl7:participant" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(hl7:participantRole/hl7:id)>=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(hl7:participantRole/hl7:id)>=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-212| Sezione Interventi Prestazioni Consulenze e Richieste: l'elemento entry/act/participant DEVE contenere almeno un elemento participantRole/id.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:family)=1 and count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:family)=1 and count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-213| Sezione Interventi Prestazioni Consulenze e Richieste: l'elemento entry/act/participant/participant/playingEntity/name DEVE contenere gli elementi 'family' e 'given' .</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='30954-2']]/hl7:entry" mode="M3" priority="1025">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='30954-2']]/hl7:entry" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:organizer[@classCode='BATTERY'][@moodCode='EVN'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:organizer[@classCode='BATTERY'][@moodCode='EVN'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-214| Sezione Accertamenti:  l'elemento organizer DEVE essere valorizzato con gli attributi @classCode='BATTERY' e @moodCode='EVN'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:organizer/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.45'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:organizer/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.45'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-215| Sezione Accertamenti: l'elemento entry/organizer DEVE contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.45'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:organizer/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:organizer/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-216| Sezione Accertamenti: l'elemento entry/organizer DEVE contenere un elemento statusCode valorizzato con l'attributo @code='completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:organizer/hl7:participant)=0 or (count(hl7:organizer/hl7:participant[@typeCode='REF']))>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:organizer/hl7:participant)=0 or (count(hl7:organizer/hl7:participant[@typeCode='REF']))>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-217| Sezione Accertamenti: l'elemento entry/act/participant se presente DEVE contenere l'attributo @typeCode='REF'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='30954-2']]/hl7:entry/hl7:organizer/hl7:performer" mode="M3" priority="1024">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='30954-2']]/hl7:entry/hl7:organizer/hl7:performer" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:family)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:family)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-218| Sezione Accertamenti: l'elemento entry/organizer/performer/assignedEntity/assignedPerson/name DEVE contenere gli elementi 'given' e 'family'.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='30954-2']]/hl7:entry/hl7:organizer/hl7:participant" mode="M3" priority="1023">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='30954-2']]/hl7:entry/hl7:organizer/hl7:participant" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(hl7:participantRole/hl7:id)>=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(hl7:participantRole/hl7:id)>=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-219| Sezione Accertamenti: l'elemento entry/organizer/participant se presente DEVE contenere almeno un elemento participantRole/id</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1 and count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:family)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1 and count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:family)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-220| Sezione Accertamenti: l'elemento entry/organizer/participant/playingEntity/name DEVE contenere gli elementi 'given' e 'family' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='30954-2']]/hl7:entry/hl7:organizer/hl7:component" mode="M3" priority="1022">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='30954-2']]/hl7:entry/hl7:organizer/hl7:component" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.46'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.46'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-221| Sezione Accertamenti: l'elemento entry/organizer/component/observation/templateId DEVE essere valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.46'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:code[@code='86524-6'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:code[@code='86524-6'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-222| Sezione Accertamenti: l'elemento entry/organizer/component/observation/code DEVE essere valorizzato con gli attributi @code='86524-6' e @codeSystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-223| Sezione Accertamenti: l'elemento entry/organizer/component/observation DEVE contenere un elemento statusCode valorizzato con l'attributo @code='completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:effectiveTime)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:effectiveTime)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-224| Sezione Accertamenti: l'elemento entry/organizer/component/observation/effectiveTime DEVE essere presente </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='8716-3']]/hl7:entry" mode="M3" priority="1021">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='8716-3']]/hl7:entry" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:organizer[@classCode='CLUSTER'][@moodCode='EVN'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:organizer[@classCode='CLUSTER'][@moodCode='EVN'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-225| Sezione Parametri Vitali: l'elemento organizer DEVE essere valorizzato con gli attributi @classCode='CLUSTER' e @moodCode='EVN'.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:organizer/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.90'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:organizer/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.90'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-226| Sezione Parametri Vitali: l'elemento entry/organizer/templateId DEVE essere valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.90'.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:organizer/hl7:code)=0 or count(hl7:organizer/hl7:code[@code='85353-1'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:organizer/hl7:code)=0 or count(hl7:organizer/hl7:code[@code='85353-1'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-227| Sezione Parametri Vitali: l'elemento entry/organizer/code DEVE essere valorizzato con gli attributi @code='85353-1' e @codeSystem='2.16.840.1.113883.6.1'.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:organizer/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:organizer/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-228| Sezione Parametri vitali: l'elemento entry/organizer DEVE contenere un elemento statusCode valorizzato con l'attributo @code='completed'.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:organizer/hl7:component[hl7:observation])>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:organizer/hl7:component[hl7:observation])>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-229| Sezione Parametri vitali: l'elemento entry/organizer DEVE contenere almeno un elemento 'component' di tipo 'observation'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='8716-3']]/hl7:entry/hl7:organizer/hl7:component" mode="M3" priority="1020">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='8716-3']]/hl7:entry/hl7:organizer/hl7:component" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.91'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.91'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-230| Sezione Parametri Vitali: l'elemento entry/organizer/component/observation/templateId DEVE essere valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.91'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:code[@code='86678-0'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:code[@code='86678-0'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-231| Sezione Parametri Vitali: l'elemento entry/organizer/component/observation/code DEVE essere valorizzato con gli attributi @code='86678-0' e @codeSystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-232| Sezione Parametri Vitali: l'elemento entry/organizer/component/observation DEVE contenere un elemento statusCode valorizzato con l'attributo @code='completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:value)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:value)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-233| Sezione Parametri Vitali: l'elemento entry/organizer/component/observation DEVE contenere un elemento 'value'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:participant)=0 or (count(hl7:observation/hl7:participant[@typeCode='REF']))>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:participant)=0 or (count(hl7:observation/hl7:participant[@typeCode='REF']))>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-234| Sezione Parametri Vitali: l'elemento entry/organizer/component/observation/participant se presente, DEVE contenere l'attributo @typeCode='REF'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='8716-3']]/hl7:entry/hl7:organizer/hl7:component/hl7:observation/hl7:performer" mode="M3" priority="1019">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='8716-3']]/hl7:entry/hl7:organizer/hl7:component/hl7:observation/hl7:performer" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:family)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:family)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-235| Sezione Parametri Vitali: l'elemento  entry/organizer/component/observation/performer/assignedEntity/assignedPerson/name DEVE contenere gli elementi 'given' e 'family' .</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='8716-3']]/hl7:entry/hl7:organizer/hl7:component/hl7:observation/hl7:participant" mode="M3" priority="1018">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='8716-3']]/hl7:entry/hl7:organizer/hl7:component/hl7:observation/hl7:participant" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(hl7:participantRole/hl7:id)>=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(hl7:participantRole/hl7:id)>=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-236| Sezione Parametri Vitali: l'elemento  entry/organizer/component/observation/participant DEVE contenere almeno un elemento participantRole/id</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1 and count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1 and count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-237| Sezione Parametri Vitali: l'elemento  entry/organizer/component/observation/participant/playingEntity/name DEVE contenere gli elementi 'given' e 'family' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='29549-3']]/hl7:entry" mode="M3" priority="1017">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='29549-3']]/hl7:entry" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:substanceAdministration[@classCode='SBADM'][@moodCode='EVN'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:substanceAdministration[@classCode='SBADM'][@moodCode='EVN'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-238| Sezione Terapia Farmacologica in Pronto Soccorso: l'elemento entry/substanceAdministration DEVE avere valorizzati gli attributi @classCode='SBADM' e @moodCode='EVN'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:substanceAdministration/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.52'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:substanceAdministration/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.52'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-239| Sezione Terapia Farmacologica in Pronto Soccorso: l'elemento entry/substanceAdministration DEVE contenere l'elemento 'templateId' con attributo @root='2.16.840.1.113883.2.9.10.1.6.52'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:substanceAdministration/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:substanceAdministration/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-240| Sezione Terapia Farmacologica in Pronto Soccorso: l'elemento entry/substanceAdministration deve contenere un elemento 'statusCode' con attributo @code='completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:substanceAdministration/hl7:effectiveTime[@xsi:type='IVL_TS']/hl7:low)=1 and count(hl7:substanceAdministration/hl7:effectiveTime[@xsi:type='IVL_TS']/hl7:high)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:substanceAdministration/hl7:effectiveTime[@xsi:type='IVL_TS']/hl7:low)=1 and count(hl7:substanceAdministration/hl7:effectiveTime[@xsi:type='IVL_TS']/hl7:high)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-241| Sezione Terapia Farmacologica in Pronto Soccorso: l'elemento entry/substanceAdministration/effectiveTime deve avere l'elemento 'low' valorizzato</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:substanceAdministration/hl7:consumable/hl7:manufacturedProduct/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.53'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:substanceAdministration/hl7:consumable/hl7:manufacturedProduct/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.53'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-242| Sezione Terapia Farmacologica in Pronto Soccorso: l'elemento entry/substanceAdministration/consumable/manufacturedProduct deve contenere un elemento 'templateId' valorizzato con @root='2.16.840.1.113883.2.9.10.1.6.53'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="farma" select="hl7:substanceAdministration/hl7:consumable/hl7:manufacturedProduct/hl7:manufacturedMaterial" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($farma/hl7:code[@codeSystem='2.16.840.1.113883.2.9.6.1.5'])=1 or count($farma/hl7:code[@codeSystem='2.16.840.1.113883.6.73'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($farma/hl7:code[@codeSystem='2.16.840.1.113883.2.9.6.1.5'])=1 or count($farma/hl7:code[@codeSystem='2.16.840.1.113883.6.73'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-243| Sezione Terapia Farmacologica in Pronto Soccorso: l'elemento entry/substanceAdministration/consumable/manufacturedProduct/manufacturedMaterial deve contenere un elemento 'code' valorizzato secondo i seguenti sistemi di codifica:
+				- @codeSystem='2.16.840.1.113883.2.9.6.1.5' (AIC)
+				- @codeSystem='2.16.840.1.113883.6.73' (ATC)
+				</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count($farma/hl7:code[@codeSystem='2.16.840.1.113883.2.9.6.1.5']/hl7:translation)=0 or      count($farma/hl7:code[@codeSystem='2.16.840.1.113883.2.9.6.1.5']/hl7:translation[@codeSystem='2.16.840.1.113883.6.73'])=1) and     (count($farma/hl7:code[@codeSystem='2.16.840.1.113883.6.73']/hl7:translation)=0 or     count($farma/hl7:code[@codeSystem='2.16.840.1.113883.6.73']/hl7:translation[@codeSystem='2.16.840.1.113883.2.9.6.1.5'])=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count($farma/hl7:code[@codeSystem='2.16.840.1.113883.2.9.6.1.5']/hl7:translation)=0 or count($farma/hl7:code[@codeSystem='2.16.840.1.113883.2.9.6.1.5']/hl7:translation[@codeSystem='2.16.840.1.113883.6.73'])=1) and (count($farma/hl7:code[@codeSystem='2.16.840.1.113883.6.73']/hl7:translation)=0 or count($farma/hl7:code[@codeSystem='2.16.840.1.113883.6.73']/hl7:translation[@codeSystem='2.16.840.1.113883.2.9.6.1.5'])=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-244| Sezione Terapia Farmacologica in Pronto Soccorso: l'elemento entry/substanceAdministration/consumable/manufacturedProduct/manufacturedMaterial/code/translation deve essere valorizzato secondo i seguenti sistemi di codifica:
+				- @codeSystem='2.16.840.1.113883.2.9.6.1.5' (AIC)
+				- @codeSystem='2.16.840.1.113883.6.73' (ATC)</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:substanceAdministration/hl7:participant)=0 or (count(hl7:substanceAdministration/hl7:participant[@typeCode='REF']))>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:substanceAdministration/hl7:participant)=0 or (count(hl7:substanceAdministration/hl7:participant[@typeCode='REF']))>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-245| Sezione Terapia Farmacologica in Pronto Soccorso: l'elementoentry/substanceAdministration/participant se presente, DEVE contenere l'attributo @typeCode='REF'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='29549-3']]/hl7:entry/hl7:substanceAdministration/hl7:performer" mode="M3" priority="1016">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='29549-3']]/hl7:entry/hl7:substanceAdministration/hl7:performer" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="(count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:family)=1 and count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:given)=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="(count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:family)=1 and count(hl7:assignedEntity/hl7:assignedPerson/hl7:name/hl7:given)=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-246| Sezione Terapia Farmacologica in Pronto Soccorso: l'elemento entry/substanceAdministration/performer/assignedEntity/assignedPerson/name deve contenere gli elementi 'given' e 'family'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='29549-3']]/hl7:entry/hl7:substanceAdministration/hl7:participant" mode="M3" priority="1015">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='29549-3']]/hl7:entry/hl7:substanceAdministration/hl7:participant" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:id)>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:id)>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-247| Sezione Terapia Farmacologica in Pronto Soccorso: l'elemento entry/substanceAdministration/participant/participantRole deve contenere almeno un elemento 'id'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:family)=1 and       count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:family)=1 and count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-248| Sezione Terapia Farmacologica in Pronto Soccorso: l'elemento entry/substanceAdministration/participant/participantRole/name deve contenere gli elementi 'given' e 'family'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='29549-3']]/hl7:entry/hl7:substanceAdministration/hl7:entryRelationship" mode="M3" priority="1014">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='29549-3']]/hl7:entry/hl7:substanceAdministration/hl7:entryRelationship" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation)=1 or count(hl7:supply)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation)=1 or count(hl7:supply)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-249| Sezione Terapia farmacologica in Pronto Soccorso: entry/substanceAdministration/entryRelationship  deve contenere un elemento di tipo "observation" o "supply" </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry/hl7:act[hl7:code[@code='dimissione']]/hl7:entryRelationship[hl7:encounter]" mode="M3" priority="1013">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry/hl7:act[hl7:code[@code='dimissione']]/hl7:entryRelationship[hl7:encounter]" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:encounter/@classCode)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:encounter/@classCode)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-250| Sezione Dimissione - "Encounter Post Dimissione": l'elemento entry/act/entryRelationship/encounter deve avere l'attributo '@classCode' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:encounter/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.67'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:encounter/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.67'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-251| Sezione Dimissione - "Encounter Post Dimissione": l'elemento entry/act/entryRelationship/encounter deve contenere l'elemento 'templateId' con attributo @root='2.16.840.1.113883.2.9.10.1.6.67' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:encounter/hl7:id)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:encounter/hl7:id)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-252| Sezione Dimissione - "Encounter Post Dimissione":l'elemento entry/act/entryRelationship/encounter deve contenere l'elemento 'id'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:encounter/hl7:code)=0 or count(hl7:encounter/hl7:code[@code='IMP'][@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.9'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:encounter/hl7:code)=0 or count(hl7:encounter/hl7:code[@code='IMP'][@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.9'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-253| Sezione Dimissione - "Encounter Post Dimissione": l'elemento entry/act/entryRelationship/encounter/code se presente, deve contenere gli attributi @code='IMP' e @codeSystem='2.16.840.1.113883.2.9.1.11.1.2.9' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:encounter/hl7:effectiveTime)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:encounter/hl7:effectiveTime)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-254| Sezione Dimissione - "Encounter Post Dimissione": l'elemento entry/act/entryRelationship/encounter deve contenere l'elemento 'effectiveTime' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:encounter/hl7:participant)=0 or count(hl7:encounter/hl7:participant[@typeCode='LOC'])>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:encounter/hl7:participant)=0 or count(hl7:encounter/hl7:participant[@typeCode='LOC'])>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-255| Sezione Dimissione - "Encounter Post Dimissione": l'elemento entry/act/entryRelationship/encounter/participant se presente, deve essere avere attributo @typeCode='LOC' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:encounter/hl7:entryRelationship)=0 or count(hl7:encounter/hl7:entryRelationship[@typeCode='RSON'])>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:encounter/hl7:entryRelationship)=0 or count(hl7:encounter/hl7:entryRelationship[@typeCode='RSON'])>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-256| Sezione Dimissione - "Encounter Post Dimissione":  l'elemento entry/act/entryRelationship/encounter/entryRelationship se presente, deve avere attributo @typeCode='RSON' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry/hl7:act[hl7:code[@code='dimissione']]/hl7:entryRelationship/hl7:encounter/hl7:participant" mode="M3" priority="1012">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry/hl7:act[hl7:code[@code='dimissione']]/hl7:entryRelationship/hl7:encounter/hl7:participant" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/@classCode)=0 or count(hl7:participantRole[@classCode='SDLOC'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/@classCode)=0 or count(hl7:participantRole[@classCode='SDLOC'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-257| Sezione Dimissione - "Encounter Post Dimissione": l'elemento entry/act/entryRelationship/encounter/participant/participantRole, se presenta l'attibuto @classCode deve essere valorizzato con 'SDLOC'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.64'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.64'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-258| Sezione Dimissione - "Encounter Post Dimissione": l'elemento entry/act/entryRelationship/encounter/participant/participantRole deve contenere l'elemento templateId con attributo @root='2.16.840.1.113883.2.9.10.1.6.64' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:code)=0 or count(hl7:participantRole/hl7:code[@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.11'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:code)=0 or count(hl7:participantRole/hl7:code[@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.11'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-259| Sezione Dimissione - "Encounter Post Dimissione": l'elemento entry/act/entryRelationship/encounter/participant/participantRole/code se presente, deve essere valorizzato con l'attributo @codeSystem='2.16.840.1.113883.2.9.1.11.1.2.11' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry/hl7:act[hl7:code[@code='dimissione']]/hl7:entryRelationship/hl7:encounter/hl7:entryRelationship" mode="M3" priority="1011">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry/hl7:act[hl7:code[@code='dimissione']]/hl7:entryRelationship/hl7:encounter/hl7:entryRelationship" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.68'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.68'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-260| Sezione Dimissione - "Encounter Post Dimissione": l'elemento entry/act/entryRelationship/encounter/entryRelationship/observation deve contenere l'elemento 'templateId' con attributo @root='2.16.840.1.113883.2.9.10.1.6.68' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:code[@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.13'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:code[@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.13'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-261| Sezione Dimissione - "Encounter Post Dimissione": l'elemento entry/act/entryRelationship/encounter/entryRelationship/observation deve contenere l'elemento 'code' con attributo @codeSystem='2.16.840.1.113883.2.9.1.11.1.2.13'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-262| Sezione Dimissione - "Encounter Post Dimissione": l'elemento entry/act/entryRelationship/encounter/entryRelationship/observation deve contenere l'elemento 'statusCode' con attributo @code='completed' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry/hl7:act[hl7:code[@code='dimissione']]/hl7:entryRelationship[hl7:act]" mode="M3" priority="1010">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry/hl7:act[hl7:code[@code='dimissione']]/hl7:entryRelationship[hl7:act]" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act[@classCode='TRNS'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act[@classCode='TRNS'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-263| Sezione Dimissione - "Trasferimento post dimissione": l'elemento entry/act/entryRelationship/act deve avere l'attributo @classCode='TRNS'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.92'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.92'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-264| Sezione Dimissione - "Trasferimento post dimissione": l'elemento entry/act/entryRelationship/act deve contenere l'elemento templateId con attributo @root='2.16.840.1.113883.2.9.10.1.6.92'  </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:effectiveTime)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:effectiveTime)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-265| Sezione Dimissione - "Trasferimento post dimissione": l'elemento entry/act/entryRelationship/act deve contenere l'elemento 'effectiveTime'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:participant)=0 or count(hl7:act/hl7:participant[@typeCode='LOC'])>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:participant)=0 or count(hl7:act/hl7:participant[@typeCode='LOC'])>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-266| Sezione Dimissione - "Trasferimento post dimissione": l'elemento entry/act/entryRelationship/act/participant se presente, deve avere l'attributo @typeCode='LOC'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:entryRelationship)=0 or count(hl7:act/hl7:entryRelationship[@typeCode='RSON'])>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:entryRelationship)=0 or count(hl7:act/hl7:entryRelationship[@typeCode='RSON'])>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-267| Sezione Dimissione - "Trasferimento post dimissione": l'elemento entry/act/entryRelationship/act/entryRelationship se presente, deve avere l'attributo @typeCode='RSON'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry/hl7:act[hl7:code[@code='dimissione']]/hl7:entryRelationship/hl7:act/hl7:participant" mode="M3" priority="1009">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry/hl7:act[hl7:code[@code='dimissione']]/hl7:entryRelationship/hl7:act/hl7:participant" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/@classCode)=0 or count(hl7:participantRole[@classCode='SDLOC'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/@classCode)=0 or count(hl7:participantRole[@classCode='SDLOC'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-268| Sezione Dimissione - "Trasferimento post dimissione": l'attributo @classCode di entry/act/entryRelationship/act/participant/participantRole se presente, deve essere valorizzato con 'SDLOC'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.64'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.64'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-269| Sezione Dimissione - "Trasferimento post dimissione": l'elemento entry/act/entryRelationship/act/participant/participantRole deve contenere l'elemento 'templateId' con attributo @root='2.16.840.1.113883.2.9.10.1.6.64'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:code)=0 or count(hl7:participantRole/hl7:code[@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.11'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:code)=0 or count(hl7:participantRole/hl7:code[@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.11'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-270| Sezione Dimissione - "Trasferimento post dimissione":  l'elemento entry/act/entryRelationship/act/participant/participantRole/code se presente, deve avere l'attributo @codeSystem='2.16.840.1.113883.2.9.1.11.1.2.11'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry/hl7:act[hl7:code[@code='dimissione']]/hl7:entryRelationship/hl7:act/hl7:entryRelationship" mode="M3" priority="1008">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry/hl7:act[hl7:code[@code='dimissione']]/hl7:entryRelationship/hl7:act/hl7:entryRelationship" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.68'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.68'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-271| Sezione Dimissione - "Trasferimento post dimissione": l'elemento entry/act/entryRelationship/act/entryRelationship/observation deve contenere l'elemento 'templateId' con attributo @root='2.16.840.1.113883.2.9.10.1.6.68'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:code[@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.13'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:code[@codeSystem='2.16.840.1.113883.2.9.1.11.1.2.13'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-272| Sezione Dimissione - "Trasferimento post dimissione": l'elemento entry/act/entryRelationship/act/entryRelationship/observation deve contenere l'elemento 'code' con attributo @codeSystem='2.16.840.1.113883.2.9.1.11.1.2.13'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-273| Sezione Dimissione - "Trasferimento post dimissione": l'elemento entry/act/entryRelationship/act/entryRelationship/observation deve contenere l'elemento 'statusCode' con attributo @code='completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry/hl7:act[hl7:code[@code='dimissione']]/hl7:entryRelationship[hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.70']]" mode="M3" priority="1007">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='28574-2']]/hl7:entry/hl7:act[hl7:code[@code='dimissione']]/hl7:entryRelationship[hl7:observation/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.70']]" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:code[@code='29308-4'][@codeSystem='2.16.840.1.113883.6.1'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:code[@code='29308-4'][@codeSystem='2.16.840.1.113883.6.1'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-274| Sezione Dimissione - "Diagnosi di Dimissione": l'elemento entry/act/entryRelationship/observation deve contenere l'elemento 'code' con attributi @code='29308-4' e @codeSystem='2.16.840.1.113883.6.1'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:statusCode[@code='completed'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:statusCode[@code='completed'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-275| Sezione Dimissione - "Diagnosi di Dimissione": l'elemento entry/act/entryRelationship/observation deve contenere l'elemento 'statusCode' con attributo @code='completed'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.6.103'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:observation/hl7:value[@codeSystem='2.16.840.1.113883.6.103'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-276| Sezione Dimissione - "Diagnosi di Dimissione": l'elemento entry/act/entryRelationship/observation deve contenere l'elemento 'value' con attributo @codeSystem='2.16.840.1.113883.6.103'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='18776-5']]/hl7:entry" mode="M3" priority="1006">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='18776-5']]/hl7:entry" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act[@classCode='ACT'][@moodCode='INT'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act[@classCode='ACT'][@moodCode='INT'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-277| Sezione Piano di cura alla dimissione: l'elemento entry/act deve avere attributi @classCode='ACT' e @moodCode='INT'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.62'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.62'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-278| Sezione Piano di cura alla dimissione: l'elemento entry/act deve contenere un elemento templateId con attributo @root='2.16.840.1.113883.2.9.10.1.6.62'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:statusCode[@code='active'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:statusCode[@code='active'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-279| Sezione Piano di cura alla dimissione: l'elemento entry/act deve contenere un elemento statusCode con attributo @code='active'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:reference)=0 or (count(hl7:act/hl7:reference/hl7:externalAct/@moodCode)=1 and     count(hl7:act/hl7:reference/hl7:externalAct/@classCode)=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:reference)=0 or (count(hl7:act/hl7:reference/hl7:externalAct/@moodCode)=1 and count(hl7:act/hl7:reference/hl7:externalAct/@classCode)=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-280| Sezione Piano di cura alla dimissione: l'elemento entry/act/reference se presente deve contenere un elemento 'externalAct' con attributi @classCode='ACT' e @moodCode='EVN'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:reference)=0 or (count(hl7:act/hl7:reference/hl7:externalAct/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.89'])=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:reference)=0 or (count(hl7:act/hl7:reference/hl7:externalAct/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.89'])=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-281| Sezione Piano di cura alla dimissione: l'elemento entry/act/reference/externalAct deve contenere un elemento 'templateId' con attributo @root='2.16.840.1.113883.2.9.10.1.6.89'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:act/hl7:reference)=0 or (count(hl7:act/hl7:reference/hl7:externalAct/hl7:id[@root='2.16.840.1.113883.2.9.4.3.9'])=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:act/hl7:reference)=0 or (count(hl7:act/hl7:reference/hl7:externalAct/hl7:id[@root='2.16.840.1.113883.2.9.4.3.9'])=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-282| Sezione Piano di cura alla dimissione: l'elemento entry/act/reference/externalAct deve contenere un elemento 'id' con attributo @root='2.16.840.1.113883.2.9.4.3.9'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='18776-5']]/hl7:author" mode="M3" priority="1005">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='18776-5']]/hl7:author" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or     (count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1)" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or (count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1)">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-283| Sezione Piano di cura alla dimissione: l'elemento author/assignedAuthor/assignedPerson/name deve contenere i sotto-elementi 'given' e 'family' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='18776-5']]/hl7:entry/hl7:act/hl7:author" mode="M3" priority="1004">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='18776-5']]/hl7:entry/hl7:act/hl7:author" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-284| Sezione Piano di cura alla dimissione: l'elemento entry/act/author/assignedAuthor/assignedPerson deve contenere l'elemento name con i sotto-elementi 'given' e 'family'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='75311-1']]/hl7:author" mode="M3" priority="1003">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='75311-1']]/hl7:author" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or     count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:assignedAuthor/hl7:assignedPerson)=0 or count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:family)=1 and count(hl7:assignedAuthor/hl7:assignedPerson/hl7:name/hl7:given)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-285| Sezione Terapia Farmacologica alla dimissione: l'elemento author/assignedAuthor/assignedPerson/name DEVE contenere gli elementi family e given</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='75311-1']]/hl7:entry" mode="M3" priority="1002">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='75311-1']]/hl7:entry" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:substanceAdministration/@classCode)=1 and count(hl7:substanceAdministration[@moodCode='INT'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:substanceAdministration/@classCode)=1 and count(hl7:substanceAdministration[@moodCode='INT'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-286| Sezione Terapia Farmacologica alla dimissione: se presente entry deve avere l'elemento "substanceAdministration" con gli attributi "classCode=SBADM"e "moodCode=INT"</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:substanceAdministration/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.52'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:substanceAdministration/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.52'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-287| Sezione Terapia Farmacologica alla dimissione: entry/substanceAdministration deve contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.52'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:substanceAdministration/hl7:statusCode[@code='active'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:substanceAdministration/hl7:statusCode[@code='active'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-288| Sezione Terapia Farmacologica alla dimissione: entry/substanceAdministration deve contenere un elemento statusCode valorizzato con l'attributo @code='active'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:substanceAdministration/hl7:effectiveTime[@xsi:type='IVL_TS']/hl7:low)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:substanceAdministration/hl7:effectiveTime[@xsi:type='IVL_TS']/hl7:low)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-289|Sezione Terapia farmacologica alla dimissione: entry/substanceAdministration/effectiveTime deve avere l'elemento 'low' valorizzato </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:substanceAdministration/hl7:consumable/hl7:manufacturedProduct/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.53'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:substanceAdministration/hl7:consumable/hl7:manufacturedProduct/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.53'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-290| Sezione Terapia farmacologica alla dimissione: entry/substanceAdministration/consumable/manufacturedProduct DEVE contenere l'elemento templateId valorizzato con l'attributo @root='2.16.840.1.113883.2.9.10.1.6.53'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:substanceAdministration/hl7:consumable/hl7:manufacturedProduct/hl7:manufacturedMaterial/hl7:code[@codeSystem='2.16.840.1.113883.2.9.6.1.5'])=1 or    count(hl7:substanceAdministration/hl7:consumable/hl7:manufacturedProduct/hl7:manufacturedMaterial/hl7:code[@codeSystem='2.16.840.1.113883.6.73'])=1 or     count(hl7:substanceAdministration/hl7:consumable/hl7:manufacturedProduct/hl7:manufacturedMaterial/hl7:code[@codeSystem='2.16.840.1.113883.2.9.6.1.51'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:substanceAdministration/hl7:consumable/hl7:manufacturedProduct/hl7:manufacturedMaterial/hl7:code[@codeSystem='2.16.840.1.113883.2.9.6.1.5'])=1 or count(hl7:substanceAdministration/hl7:consumable/hl7:manufacturedProduct/hl7:manufacturedMaterial/hl7:code[@codeSystem='2.16.840.1.113883.6.73'])=1 or count(hl7:substanceAdministration/hl7:consumable/hl7:manufacturedProduct/hl7:manufacturedMaterial/hl7:code[@codeSystem='2.16.840.1.113883.2.9.6.1.51'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-291|Sezione Terapia farmacologica alla dimissione: l'elemento entry/substanceAdministration/consumable/manufacturedProduct/manufacturedMaterial/code DEVE avere l'attributo "@codeSystem" valorizzato come segue:
+			- '2.16.840.1.113883.2.9.6.1.5' codifica "AIC"
+			- '2.16.840.1.113883.6.73' codifica "WHO ATC" 
+			- '2.16.840.1.113883.2.9.6.1.51' codifica "GE"
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:variable name="farma" select="hl7:substanceAdministration/hl7:consumable/hl7:manufacturedProduct/hl7:manufacturedMaterial/hl7:code" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count($farma/hl7:translation)=0 or count($farma/hl7:translation[@codeSystem='2.16.840.1.113883.2.9.6.1.5'])=1 or count($farma/hl7:translation[@codeSystem='2.16.840.1.113883.6.73'])=1 or    count($farma/hl7:translation[@codeSystem='2.16.840.1.113883.2.9.6.1.51'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count($farma/hl7:translation)=0 or count($farma/hl7:translation[@codeSystem='2.16.840.1.113883.2.9.6.1.5'])=1 or count($farma/hl7:translation[@codeSystem='2.16.840.1.113883.6.73'])=1 or count($farma/hl7:translation[@codeSystem='2.16.840.1.113883.2.9.6.1.51'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-292| Sezione Terapia farmacologica alla dimissione: l'elemento entry/substanceAdministration/consumable/manufacturedProduct/manufacturedMaterial/code/translation DEVE avere l'attributo "@codeSystem" valorizzato come segue: 
+			- '2.16.840.1.113883.2.9.6.1.5'  codifica "AIC"
+			- '2.16.840.1.113883.6.73'  codifica "WHO ATC" 
+			- '2.16.840.1.113883.2.9.6.1.51'  codifica "GE"		
+			</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:substanceAdministration/hl7:participant)=0 or count(hl7:substanceAdministration/hl7:participant[@typeCode='REF'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:substanceAdministration/hl7:participant)=0 or count(hl7:substanceAdministration/hl7:participant[@typeCode='REF'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-293| Sezione Terapia Farmacologica alla dimissione: se presente entry/substanceAdministration deve contenere l'elemento "participant" con attributo @typeCode='REF'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:substanceAdministration/hl7:reference)=0 or count(hl7:substanceAdministration/hl7:reference[@typeCode='REFR'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:substanceAdministration/hl7:reference)=0 or count(hl7:substanceAdministration/hl7:reference[@typeCode='REFR'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-294| Sezione Terapia farmacologica alla dimissione: se presente entry/substanceAdministration/reference, DEVE contenere attributo @typeCode='REFR'</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='75311-1']]/hl7:entry/hl7:substanceAdministration/hl7:participant" mode="M3" priority="1001">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='75311-1']]/hl7:entry/hl7:substanceAdministration/hl7:participant" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:id)>=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:id)>=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-295| Sezione Terapia Farmacologica alla dimissione: se presente entry/substanceAdministration/participant, DEVE contenere almeno un elemento participantRole/id </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1 and count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:family)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:given)=1 and count(hl7:participantRole/hl7:playingEntity/hl7:name/hl7:family)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-296| Sezione Terapia Farmacologica alla dimissione: se presente entry/substanceAdministration/participant, DEVE contenere l'elemento participant/playingEntity/name</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+
+	<!--RULE -->
+<xsl:template match="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='75311-1']]/hl7:entry/hl7:substanceAdministration/hl7:reference" mode="M3" priority="1000">
+    <svrl:fired-rule context="hl7:ClinicalDocument/hl7:component/hl7:structuredBody/hl7:component/hl7:section[hl7:code[@code='75311-1']]/hl7:entry/hl7:substanceAdministration/hl7:reference" />
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:externalAct/@classCode)=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:externalAct/@classCode)=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-297| Sezione Terapia farmacologica alla dimissione: entry/substanceAdministration/reference/externalAct deve avere l'attributo @classCode</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:externalAct/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.89'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:externalAct/hl7:templateId[@root='2.16.840.1.113883.2.9.10.1.6.89'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-298| Sezione Terapia farmacologica alla dimissione: l'elemento entry/substanceAdministration/reference/externalAct/templateId DEVE avere l'attributo @root='2.16.840.1.113883.2.9.10.1.6.89' </svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+
+		<!--ASSERT -->
+<xsl:choose>
+      <xsl:when test="count(hl7:externalAct/hl7:id[@root='2.16.840.1.113883.2.9.4.3.9'])=1" />
+      <xsl:otherwise>
+        <svrl:failed-assert test="count(hl7:externalAct/hl7:id[@root='2.16.840.1.113883.2.9.4.3.9'])=1">
+          <xsl:attribute name="location">
+            <xsl:apply-templates mode="schematron-select-full-path" select="." />
+          </xsl:attribute>
+          <svrl:text>ERRORE-299| Sezione Terapia farmacologica alla dimissione. l'elemento entry/substanceAdministration/reference/externalAct/id DEVE esssere valorizzato con l'attributo @root='2.16.840.1.113883.2.9.4.3.9'.</svrl:text>
+        </svrl:failed-assert>
+      </xsl:otherwise>
+    </xsl:choose>
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+  <xsl:template match="text()" mode="M3" priority="-1" />
+  <xsl:template match="@*|node()" mode="M3" priority="-2">
+    <xsl:apply-templates mode="M3" select="*|comment()|processing-instruction()" />
+  </xsl:template>
+</xsl:stylesheet>

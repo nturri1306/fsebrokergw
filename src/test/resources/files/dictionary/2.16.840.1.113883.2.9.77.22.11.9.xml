@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<list xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+<!--Problem Observation-->
+	<el code="52797-8">DIAGNOSI CODICE ICD</el>
+	<el code="75321-0">OBIETTIVITA'CLINICA</el>
+	<el code="75322-8">DISTURBO</el>
+	<el code="75326-9">PROBLEMA</el>
+	<el code="74836-8">TIPO DI TRAPIANTO</el>
+	<el code="75246-9">ACTIVITY</el>
+</list>	

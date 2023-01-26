@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<list xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+<!--Encounter Code-->
+	<el code="IMP">RICOVERO</el>
+	<el code="ACUTE">RICOVERO URGENTE</el>
+	<el code="NONAC">RICOVERO PROGRAMMATO</el>
+	<el code="ALC">IN ATTESA DI TRASFERIMENTO</el>
+	<el code="CARD">CARDIOLOGIA</el>
+	<el code="CHR">CRONICO</el>
+	<el code="DNTL">ODONTOIATRIA</el>
+	<el code="GENRL">ASSISTENZA DI MEDICINA GENERALE</el>
+	<el code="MED">ASSISTENZA MEDICA</el>
+	<el code="OBS">OSTETRICIA</el>
+	<el code="ONC">ONCOLOGIA</el>
+	<el code="PALL">CURE PALLIATIVE</el>
+	<el code="PED">PEDIATRIA</el>
+	<el code="PHAR">ASSISTENA FARMACEUTICA</el>
+	<el code="PHYRHB">RIABILITAZIONE FISICA</el>
+	<el code="PSYCH">ASSISTENZA PSICHIATRICA</el>
+	<el code="SURG">INTERVENTO CHIRURGICO</el>
+	<el code="AMB">AMBULATORIALE</el>
+	<el code="EMER">EMERGENZA</el>
+	<el code="FLD">ASSISTENZA TERRITORIALE</el>
+</list>	

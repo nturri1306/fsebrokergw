@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<list xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+<!--PSSIT-->
+	<el code="PSSADI">ASSISTENZA DOMICILIARE INTEGRATA</el>
+	<el code="PSSADP">ASSISTENZA DOMICILIARE PROGRAMMATA</el>
+	<el code="PSSIT99">RETI DI PATOLOGIA</el>
+
+</list>	

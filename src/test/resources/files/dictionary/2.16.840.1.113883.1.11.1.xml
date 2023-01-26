@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<list xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+<!--Administrative Gender-->
+	<el code="F">FEMALE</el>
+	<el code="M">MALE</el>
+	<el code="UN">UNDIFFERENTIATED</el>	
+</list>	

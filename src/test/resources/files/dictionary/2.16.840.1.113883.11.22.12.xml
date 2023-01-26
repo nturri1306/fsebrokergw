@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<list xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+<!--ActStatusActiveCompletedAborteSuspended-->
+	<el code="completed">COMPLETED</el>
+	<el code="aborted">ABORTED</el>
+	<el code="active">ACTIVE</el>
+	<el code="suspended">SUSPENDED</el>
+	
+</list>	

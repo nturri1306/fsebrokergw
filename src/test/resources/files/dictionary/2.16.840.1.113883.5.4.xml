@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<list xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+<!--ObservationIntoleranceType-->
+	<el code="OINT">INTOLERANCE</el>
+	<el code="ALG">ALLERGY</el>
+	<el code="DALG">DRUG ALLERGY</el>
+	<el code="EALG">ENVIRONMENTAL ALLERGY</el>
+	<el code="FALG">FOOD ALLERGY</el>
+	<el code="NAINT">NON-ALLERGY INTOLERANCE</el>
+	<el code="FNAINT">FOOD NON-ALLERGY INTOLERANCE</el>
+	<el code="DNAINT">DRUG NON-ALLERGY INTOLLERANCE</el>
+	<el code="ENAINT">ENVIRONMENTAL NON-ALLERGY INTOLERANCE</el>
+	<el code="FINT">FOOD INTOLERANCE</el>
+	<el code="DINT">DRUG INTOLERANCE</el>
+	<el code="EINT">ENVIRONMENTAL INTOLERANCE</el>
+</list>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<list xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+<!--Capacità Motoria-->
+	<el code="LA21285-4">AUTONOMO</el>
+	<el code="LA21286-5">ASSISTITO</el>
+	<el code="LA6743-4">SU SEDIA A ROTELLE</el>
+	<el code="LA4270-0">ALLETTATO</el>
+</list>	

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<list xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+<!--Absent or Unknown Medication-->
+	<el code="no-medication-info">NO INFORMATION ABOUT MEDICATIONS</el>
+	<el code="no-known-medications">NO KNOWN MEDICATIONS</el>
+</list>	
