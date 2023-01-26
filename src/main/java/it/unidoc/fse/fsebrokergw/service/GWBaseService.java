@@ -30,6 +30,9 @@ public class GWBaseService {
         return "FAKE_HEADER." + hashSignature + ".FAKE_SIGNATURE";
     }
 
+    public String getHashSignatureGW() {
+        return  hashSignature ;
+    }
 
     public String getBearerToken() {
         return bearerToken;

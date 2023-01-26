@@ -20,10 +20,10 @@ public class CDAController {
     @PostMapping("/validate-cda")
     public @ResponseBody String validateCDA(@RequestParam("cdaFile") MultipartFile cdaFile, Model model) {
 
-        try {
+       /* try {
             // Crea un oggetto SAXReader per leggere il file XML
             SAXReader reader = new SAXReader();
-/*
+
             // Legge il file CDA caricato
             Document document = reader.read(cdaFile.getInputStream());
 
@@ -38,10 +38,10 @@ public class CDAController {
                 model.addAttribute("message", "Il file CDA è valido");
             } else {
                 model.addAttribute("message", "Il file CDA non è valido");
-            }*/
+            }
         } catch (Exception e) {
             model.addAttribute("message", "Errore durante la validazione: " + e.getMessage());
-        }
+        }*/
 
         // Restituisce la vista per mostrare il messaggio di risposta
         return "cda-response";

@@ -1,4 +1,4 @@
-package it.unidoc.fse.test;
+package it.unidoc.fse.fsebrokergw;
 
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -11,21 +11,28 @@ import it.unidoc.fse.fsebrokergw.data.response.*;
 import it.unidoc.fse.fsebrokergw.service.GWPublishService;
 import it.unidoc.fse.fsebrokergw.service.GWStatusService;
 import it.unidoc.fse.fsebrokergw.service.GWValidationService;
+import okhttp3.*;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+
+
 
 
 /**
@@ -93,6 +100,27 @@ public class TestFseBrokerGW {
         assertEquals(gwStatusService.getStatus().getStatusCode().value(), 200);
     }
 
+
+    @Test
+    public void validationAttachment_CERT_VACC_GW() throws JsonProcessingException {
+
+        gwValidationService.setBearerToken(yamlConfig.getJWT_PAYLOAD());
+        gwValidationService.setHashSignature(yamlConfig.getJWT_WITH_HASH_PAYLOAD());
+        String pdfFile = pathPdf + File.separator + yamlConfig.getPDF_CERT_VACC();
+
+        var response = gwValidationService.validation(pdfFile, getHealthDataValidationAttachment(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
+
+        assertTrue(response.getStatusCode().value() == 200 || response.getStatusCode().value() == 201);
+
+        var transactionData = getWorkFlowIntanceId(response.getBody().getWorkflowInstanceId());
+
+        assertTrue(transactionData.getTransactionData().size() > 0);
+
+        transactionData = getStatusTraceId(response.getBody().getTraceID());
+
+        assertTrue(transactionData.getTransactionData().size() > 0);
+    }
+
     @Test
     public void validationAttachment_CERT_VACC() throws JsonProcessingException {
 
@@ -108,7 +136,7 @@ public class TestFseBrokerGW {
 
         assertTrue(transactionData.getTransactionData().size() > 0);
 
-        transactionData =  getStatusTraceId(response.getBody().getTraceID());
+        transactionData = getStatusTraceId(response.getBody().getTraceID());
 
         assertTrue(transactionData.getTransactionData().size() > 0);
     }
@@ -127,7 +155,6 @@ public class TestFseBrokerGW {
         var transactionData = getWorkFlowIntanceId(response.getBody().getWorkflowInstanceId());
 
         assertTrue(transactionData.getTransactionData().size() > 0);
-
 
 
     }
@@ -290,5 +317,39 @@ public class TestFseBrokerGW {
         // Printing the generated random numbers
         return random_int;
     }
+
+    @Test
+    public void validationPostman() throws IOException {
+
+        OkHttpClient client = new OkHttpClient().newBuilder()
+                .build();
+        RequestBody body = new MultipartBody.Builder().setType(MultipartBody.FORM)
+                .addFormDataPart("file", "/C:/it-fse-gtw-test-container-main/tests/files/pdf/CERT_VACC.pdf",
+                        RequestBody.create(okhttp3.MediaType.parse("application/octet-stream"), new File("/C:/it-fse-gtw-test-container-main/tests/files/pdf/CERT_VACC.pdf")))
+                .addFormDataPart("requestBody", "{\"healthDataFormat\": \"CDA\",  \"mode\": \"ATTACHMENT\",  \"activity\": \"VERIFICA\"}")
+                .build();
+
+        Request request = new Request.Builder()
+                .url("https://modipa-val.fse.salute.gov.it/govway/rest/in/FSE/gateway/v1/documents/validation")
+                .method("POST", body)
+                .addHeader("Content-Type", "multipart/form-data")
+                .addHeader("Accept", "application/json")
+                .addHeader("FSE-JWT-Signature", yamlConfig.getJWT_WITH_HASH_PAYLOAD())
+                .addHeader("Authorization", "Bearer " + yamlConfig.getJWT_PAYLOAD())
+                .build();
+
+
+
+
+            var response = client.newCall(request).execute();
+
+            assertTrue(response.code() == 200 || response.code() == 201);
+
+
+
+
+    }
+
+
 
 }

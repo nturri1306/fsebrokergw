@@ -17,6 +17,8 @@ public class YAMLConfig {
 
 
     private String GWURLSERVICE;
+    private String JWT_PAYLOAD;
+    private String JWT_WITH_HASH_PAYLOAD;
     private String JWT_CERT_VACC_PAYLOAD;
     private String JWT_CERT_VACC_WITH_HASH_PAYLOAD;
     private String JWT_LAB_PAYLOAD;
@@ -42,6 +44,22 @@ public class YAMLConfig {
     private String PDF_RSA;
     private String PDF_SING_VACC;
     private String PDF_VPS;
+
+    public String getJWT_PAYLOAD() {
+        return JWT_PAYLOAD;
+    }
+
+    public void setJWT_PAYLOAD(String JWT_PAYLOAD) {
+        this.JWT_PAYLOAD = JWT_PAYLOAD;
+    }
+
+    public String getJWT_WITH_HASH_PAYLOAD() {
+        return JWT_WITH_HASH_PAYLOAD;
+    }
+
+    public void setJWT_WITH_HASH_PAYLOAD(String JWT_WITH_HASH_PAYLOAD) {
+        this.JWT_WITH_HASH_PAYLOAD = JWT_WITH_HASH_PAYLOAD;
+    }
 
     public String getPDF_CERT_VACC() {
         return PDF_CERT_VACC;
@@ -106,8 +124,6 @@ public class YAMLConfig {
     public void setPDF_VPS(String PDF_VPS) {
         this.PDF_VPS = PDF_VPS;
     }
-
-
 
 
     public String getGWURLSERVICE() {

@@ -1,22 +1,35 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Validatore CDA</title>
+  <title>Valida CDA</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-<form action="/validate-cda" method="post">
-
-    <label for="cdaFile">Select a file:</label>
-    <input type="file" id="cdaFile" name="cdaFile"><br><br>
-  <input type="submit" value="Invia">
+<h1>Valida un file CDA</h1>
+<form id="cda-form" enctype="multipart/form-data">
+  <label for="cdaFile">Seleziona un file CDA:</label>
+  <input type="file" id="cdaFile" name="cdaFile" required>
+  <input type="button" value="Valida" onclick="validateCDA()">
 </form>
-<label id="validation-result"></label>
+<label id="response-message"></label>
 <script>
-        // Gestisce la risposta del server
-        function handleResponse(response) {
-            var label = document.getElementById("validation-result");
-            label.innerHTML = response;
-        }
+      function validateCDA() {
+        var formData = new FormData($("#cda-form")[0]);
+
+        $.ajax({
+          url: '/validate-cda',
+          type: 'POST',
+          data: formData,
+          contentType: false,
+          processData: false,
+          success: function(response) {
+            $("#response-message").text(response);
+          },
+          error: function() {
+            $("#response-message").text("Errore durante la validazione");
+          }
+        });
+      }
     </script>
 </body>
 </html>
