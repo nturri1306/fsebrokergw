@@ -92,8 +92,6 @@ public class CDAController {
             return e.getMessage();
         }
 
-
-        // Restituisce la vista per mostrare il messaggio di risposta
         return result.toString();
     }
 }

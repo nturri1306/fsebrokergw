@@ -21,8 +21,8 @@ public class PDFGenerator {
     public  void generate() throws Exception {
 
 
-       String output = "C:/LOGS/output.pdf";
-       String cdaFile ="C:/it-fse-gtw-test-container-main/tests/files/xml/LAB.xml";
+       String output = "C:/LOGS/sing_vacc.pdf";
+       String cdaFile ="C:\\fse2\\xml\\sing_vacc.xml";
 
        File fileOut = new  File(output);
 
