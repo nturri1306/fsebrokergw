@@ -10,11 +10,14 @@ import it.unidoc.fse.fsebrokergw.data.HealthData;
 import it.unidoc.fse.fsebrokergw.data.response.DocumentSuccessResponse;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.*;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 
+import javax.net.ssl.SSLContext;
 import java.io.File;
 
 
@@ -32,6 +35,14 @@ public class GWValidationService extends GWBaseService {
             Object requestBody = gson.toJson(healthData);
 
             RestTemplate restTemplate = new RestTemplate();
+
+            if (urlService.indexOf("https")>=0) {
+                SSLContext sslContext = SSLContext.getInstance("TLS");
+                sslContext.init(null, null, null);
+                ClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
+                restTemplate = new RestTemplate(requestFactory);
+            }
+
 
             HttpHeaders headers = new HttpHeaders();
 
@@ -57,6 +68,8 @@ public class GWValidationService extends GWBaseService {
 
             return null;
         }
+
+
 
     }
 

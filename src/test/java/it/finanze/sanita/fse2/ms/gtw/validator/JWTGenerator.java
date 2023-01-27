@@ -4,7 +4,6 @@ import it.finanze.sanita.fjm.*;
 import org.junit.Test;
 import org.junit.jupiter.api.DisplayName;
 
-
 public class JWTGenerator {
 
     @Test
@@ -20,7 +19,6 @@ public class JWTGenerator {
         String[] args = {"-d", jsonFile, "-a", user, "-p", pwd, "-t", "100000", "-v"};
 
         Launcher.main(args);
-
     }
 
     @Test
@@ -36,6 +34,5 @@ public class JWTGenerator {
         String[] args = {"-d", jsonFile, "-a", user, "-p", pwd, "-t", "100000", "-v"};
 
         Launcher.main(args);
-
     }
 }

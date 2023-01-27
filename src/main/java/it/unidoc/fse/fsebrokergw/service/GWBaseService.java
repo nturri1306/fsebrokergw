@@ -18,7 +18,10 @@ public class GWBaseService {
 
     private String hashSignature;
 
-    public String urlService = "http://127.0.0.1:9010";
+    public String _urlService = "http://127.0.0.1:9010";
+
+    public String urlService =  "https://modipa-val.fse.salute.gov.it/govway/rest/in/FSE/gateway";
+
     List<MediaType> mediaTypes = new ArrayList<>();
 
 
@@ -53,6 +56,8 @@ public class GWBaseService {
     public GWBaseService() {
         mediaTypes.add(MediaType.APPLICATION_JSON);
         mediaTypes.add(MediaType.MULTIPART_FORM_DATA);
+
+
     }
 
     public RestTemplate getRestTemplate() {
@@ -73,6 +78,8 @@ public class GWBaseService {
         return restTemplate;
 
     }
+
+
 
 
 }

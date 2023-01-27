@@ -11,6 +11,7 @@ import it.unidoc.fse.fsebrokergw.data.response.*;
 import it.unidoc.fse.fsebrokergw.service.GWPublishService;
 import it.unidoc.fse.fsebrokergw.service.GWStatusService;
 import it.unidoc.fse.fsebrokergw.service.GWValidationService;
+import it.unidoc.fse.fsebrokergw.service.TestService;
 import okhttp3.*;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,6 +25,11 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 
 import java.util.List;
@@ -76,6 +82,38 @@ public class TestFseBrokerGW {
 
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void test()
+    {
+        try {
+
+          TestService testService =  new TestService();
+
+            testService.setBearerToken(yamlConfig.getJWT_PAYLOAD());
+            testService.setHashSignature(yamlConfig.getJWT_WITH_HASH_PAYLOAD());
+
+
+            String pdfFile = pathPdf + File.separator + yamlConfig.getPDF_CERT_VACC();
+
+            var response = testService.test(pdfFile,getHealthDataValidationAttachment(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
+
+
+
+        } catch (KeyStoreException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } catch (CertificateException e) {
+            throw new RuntimeException(e);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        } catch (UnrecoverableKeyException e) {
+            throw new RuntimeException(e);
+        } catch (KeyManagementException e) {
+            throw new RuntimeException(e);
         }
     }
 
