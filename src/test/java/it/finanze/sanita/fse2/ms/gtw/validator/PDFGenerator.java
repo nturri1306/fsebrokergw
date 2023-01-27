@@ -30,7 +30,6 @@ public class PDFGenerator {
           fileOut.delete();
 
 
-
         String[] args ={"-c",cdaFile,"-x","-o",output};
 
         Launcher.main(args);

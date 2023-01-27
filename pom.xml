@@ -156,15 +156,15 @@
 			<systemPath>${project.basedir}/lib/pdf-generator-0.0.3-SNAPSHOT.jar</systemPath>
 		</dependency>
 
-		<!--
+
 		<dependency>
-			<groupId>it.finanze.sanita.fpm</groupId>
+			<groupId>it.finanze.sanita.fjm</groupId>
 			<artifactId>it-fse-gtw-tools</artifactId>
 			<version>0.0.3</version>
 			<scope>system</scope>
 			<systemPath>${project.basedir}/lib/jwt-generator-0.0.3-SNAPSHOT.jar</systemPath>
 		</dependency>
-		-->
+
 
 
 
