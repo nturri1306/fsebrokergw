@@ -6,7 +6,11 @@ import com.helger.commons.io.resource.inmemory.ReadableResourceInputStream;
 import com.helger.schematron.xslt.SchematronResourceSCH;
 import it.finanze.sanita.fse2.ms.gtw.validator.dto.SchematronValidationResultDTO;
 
+import it.finanze.sanita.fse2.ms.gtw.validator.utility.FileUtility;
 import it.it.finanze.sanita.fse2.ms.gtw.validator.cda.CDAHelper;
+import it.unidoc.fse.fsebrokergw.Application;
+import it.unidoc.fse.fsebrokergw.YAMLConfig;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +21,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -29,6 +35,9 @@ import java.nio.file.Paths;
 @Controller
 public class CDAController {
 
+    @Autowired
+    YAMLConfig yamlConfig;
+
 
     @PostMapping("/validate-cda")
     public @ResponseBody String validateCDA(@RequestParam("cdaFile") MultipartFile cdaFile,
@@ -37,21 +46,23 @@ public class CDAController {
 
         StringBuffer result = new StringBuffer();
 
-        String executionPath = System.getProperty("user.dir");
+        //String executionPath = System.getProperty("user.dir");
 
         var schemaValue = SchemaMap.getSchemaMap().get(comboValue);
 
-        File folder = new File(executionPath + "/src/test/resources/files" + File.separator + schemaValue + File.separator + "schV3");
+        File folder = new File(yamlConfig.getSCHEMATRON_PATH()  + File.separator + schemaValue + File.separator + "schV3");
 
         File[] files = folder.listFiles();
 
         Path path = Paths.get(files[0].getAbsoluteFile().getPath());
 
+        var schemaName = files[0].getAbsoluteFile().getName();
+
         byte[] schematron = Files.readAllBytes(path);
 
 
         try (ByteArrayInputStream bytes = new ByteArrayInputStream(schematron)) {
-            IReadableResource readableResource = new ReadableResourceInputStream(files[0].getAbsoluteFile().getName(), bytes);
+            IReadableResource readableResource = new ReadableResourceInputStream(schemaName, bytes);
             SchematronResourceSCH schematronResource = new SchematronResourceSCH(readableResource);
 
             SchematronValidationResultDTO resultDTO = CDAHelper.validateXMLViaSchematronFull(schematronResource, cdaFile.getBytes());

@@ -17,6 +17,9 @@ public class YAMLConfig {
 
 
     private String GWURLSERVICE;
+
+
+    private String SCHEMATRON_PATH;
     private String JWT_PAYLOAD;
     private String JWT_WITH_HASH_PAYLOAD;
     private String JWT_CERT_VACC_PAYLOAD;
@@ -44,6 +47,15 @@ public class YAMLConfig {
     private String PDF_RSA;
     private String PDF_SING_VACC;
     private String PDF_VPS;
+
+    public String getSCHEMATRON_PATH() {
+        return SCHEMATRON_PATH;
+    }
+
+    public void setSCHEMATRON_PATH(String SCHEMATRON_PATH) {
+        this.SCHEMATRON_PATH = SCHEMATRON_PATH;
+    }
+
 
     public String getJWT_PAYLOAD() {
         return JWT_PAYLOAD;

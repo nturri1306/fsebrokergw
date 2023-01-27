@@ -1,7 +1,9 @@
-server:
-  port: '9000'
-  application:
-    name: fsebrokergw-test
+#server:
+ # port: '9000'
+  #application:
+   # name: fsebrokergw-test
+
+SCHEMATRON_PATH : C:\\Users\\nturri\\IdeaProjects\\fsebrokergw\\src\\test\\resources\files
 
 #GWURLSERVICE: http://127.0.0.1:8010
 GWURLSERVICE: https://modipa-val.fse.salute.gov.it/govway/rest/in/FSE/gateway/v1
