@@ -22,6 +22,9 @@ public class GWBaseService {
 
     public String urlService =  "https://modipa-val.fse.salute.gov.it/govway/rest/in/FSE/gateway";
 
+    //public String urlService =  "http://127.0.0.1:8010/govway/rest/in/FSE/gateway";
+
+
     List<MediaType> mediaTypes = new ArrayList<>();
 
 

@@ -51,6 +51,9 @@ public class GWValidationService extends GWBaseService {
             headers.add("FSE-JWT-Signature", getHashSignatureGW());
             headers.add("Accept", "application/json");
 
+
+
+
             MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();
             map.add("requestBody", requestBody.toString());
             map.add("file", new FileSystemResource(new File(fileName)));

@@ -33,8 +33,6 @@ public class TestService extends  GWBaseService {
 
     private  String urlValidation ="/v1/documents/validation";
       public ResponseEntity<DocumentSuccessResponse> test(String fileName, HealthData healthData, MediaType mediaType)
-
-
               throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException, KeyManagementException {
 
         Gson gson = new Gson();
@@ -43,7 +41,6 @@ public class TestService extends  GWBaseService {
         String certFileName = "c:\\fse2\\certificati\\auth.p12";
         String pass = "csa";
         //String requestBody = "{\"healthDataFormat\": \"CDA\",  \"mode\": \"ATTACHMENT\",  \"activity\": \"VERIFICA\"}";
-
 
         KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
         keyStore.load(new FileInputStream(new File(certFileName)), pass.toCharArray());
@@ -62,9 +59,12 @@ public class TestService extends  GWBaseService {
         HttpHeaders headers = new HttpHeaders();
 
         headers.setContentType(mediaType);
-        headers.add("Authorization","Bearer: "+ getBearerToken());
-        headers.add("FSE-JWT-Signature", getHashSignatureGW());
+        headers.add("Content-Type","multipart/form-data");
         headers.add("Accept", "application/json");
+        headers.add("Authorization","Bearer "+ getBearerToken());
+        headers.add("FSE-JWT-Signature", getHashSignatureGW());
+
+
 
         MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();
         map.add("requestBody", requestBody.toString());

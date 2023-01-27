@@ -96,7 +96,9 @@ public class TestFseBrokerGW {
             testService.setHashSignature(yamlConfig.getJWT_WITH_HASH_PAYLOAD());
 
 
-            String pdfFile = pathPdf + File.separator + yamlConfig.getPDF_CERT_VACC();
+           // String pdfFile = pathPdf + File.separator + yamlConfig.getPDF_LAB();
+
+               String pdfFile = "c:\\logs\\output.pdf";
 
             var response = testService.test(pdfFile,getHealthDataValidationAttachment(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
 
