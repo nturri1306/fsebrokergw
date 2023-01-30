@@ -1,9 +1,10 @@
 package it.unidoc.fse.fsebrokergw;
 
-
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.core.io.Resource;
 
 
 /**
@@ -276,4 +277,22 @@ public class YAMLConfig {
     public void setJWT_LAB_PAYLOAD(String JWT_LAB_PAYLOAD) {
         this.JWT_LAB_PAYLOAD = JWT_LAB_PAYLOAD;
     }
+
+    @Value("${trustStore}")
+    private Resource trustStore;
+
+    public Resource getTrustStore() {
+        return trustStore;
+    }
+
+    public void setTrustStore(Resource trustStore) {
+        this.trustStore = trustStore;
+    }
+
+
+    private String trustPassword;
+
+
+    public String getTrustPassword() { return trustPassword; }
+    public void setTrustPassword(String value) { this.trustPassword = value; }
 }

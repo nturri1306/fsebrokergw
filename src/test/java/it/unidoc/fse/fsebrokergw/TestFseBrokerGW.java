@@ -13,23 +13,39 @@ import it.unidoc.fse.fsebrokergw.service.GWStatusService;
 import it.unidoc.fse.fsebrokergw.service.GWValidationService;
 import it.unidoc.fse.fsebrokergw.service.TestService;
 import okhttp3.*;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.ssl.SSLContextBuilder;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
+import javax.net.ssl.SSLContext;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 
 import java.util.List;
@@ -86,7 +102,27 @@ public class TestFseBrokerGW {
     }
 
     @Test
-    public void test()
+    public void test() throws Exception {
+
+
+        SSLContext sslContext = new SSLContextBuilder()
+                .loadTrustMaterial(new URL("file:src/main/resources/auth.p12"), "csa".toCharArray()).build();
+        SSLConnectionSocketFactory sslConFactory = new SSLConnectionSocketFactory(sslContext);
+
+        CloseableHttpClient httpClient = HttpClients.custom().setSSLSocketFactory(sslConFactory).build();
+        ClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory(httpClient);
+        RestTemplate restTemplate = new RestTemplate(requestFactory);
+
+        MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
+        headers.add("Content-Type", "application/json");
+        headers.add("Authorization", "Bearer "+yamlConfig.getJWT_PAYLOAD());
+        var entity = restTemplate.exchange(yamlConfig.getGWURLSERVICE()+"/v1/status/search/3f3ab67d9395af4", HttpMethod.GET, new HttpEntity<Object>(headers),
+              String.class);
+
+    }
+
+    @Test
+    public void testPdf()
     {
         try {
 
@@ -147,6 +183,8 @@ public class TestFseBrokerGW {
         gwValidationService.setBearerToken(yamlConfig.getJWT_PAYLOAD());
         gwValidationService.setHashSignature(yamlConfig.getJWT_WITH_HASH_PAYLOAD());
         String pdfFile = pathPdf + File.separator + yamlConfig.getPDF_CERT_VACC();
+
+        gwValidationService.setYamlConfig(yamlConfig);
 
         var response = gwValidationService.validation(pdfFile, getHealthDataValidationAttachment(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
 

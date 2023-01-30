@@ -38,3 +38,6 @@ PDF_RAD: RAD.pdf
 PDF_RSA: RSA.pdf
 PDF_SING_VACC: SING_VACC.pdf
 PDF_VPS: VPS.pdf
+
+trustStore: classpath:auth.p12
+trustPassword: csa
