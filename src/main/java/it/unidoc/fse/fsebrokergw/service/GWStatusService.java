@@ -25,8 +25,8 @@ public class GWStatusService extends GWBaseService {
         RestTemplate restTemplate = new RestTemplate();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.add("FSE-JWT-Signature", getHashSignature());
-        //headers.set("Authorization", "Bearer eyJhbGciOiJSUzI1NiIsInR5c ... iZPqKv3kUbn1qzLg");
+        //headers.add("FSE-JWT-Signature", getHashSignature());
+        headers.set("Authorization", "Bearer "+getBearerToken());
         headers.set("accept", MediaType.APPLICATION_JSON_VALUE);
 
         HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
@@ -40,8 +40,8 @@ public class GWStatusService extends GWBaseService {
         RestTemplate restTemplate = new RestTemplate();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.add("FSE-JWT-Signature", getHashSignature());
-        //headers.set("Authorization", "Bearer eyJhbGciOiJSUzI1NiIsInR5c ... iZPqKv3kUbn1qzLg");
+        //headers.add("FSE-JWT-Signature", getHashSignature());
+        headers.set("Authorization", "Bearer "+getBearerToken());
         headers.set("accept", MediaType.APPLICATION_JSON_VALUE);
 
         HttpEntity<String> entity = new HttpEntity<>("parameters", headers);

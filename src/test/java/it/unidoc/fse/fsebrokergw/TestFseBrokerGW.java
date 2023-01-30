@@ -3,7 +3,11 @@ package it.unidoc.fse.fsebrokergw;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import it.finanze.sanita.fjm.Launcher;
+import it.finanze.sanita.fse2.ms.gtw.validator.JWTGenerator;
 import it.unidoc.fse.fsebrokergw.YAMLConfig;
+import it.unidoc.fse.fsebrokergw.data.DataSign;
 import it.unidoc.fse.fsebrokergw.data.HealthData;
 import it.unidoc.fse.fsebrokergw.data.HealthDataComplete;
 import it.unidoc.fse.fsebrokergw.data.enums.*;
@@ -12,6 +16,8 @@ import it.unidoc.fse.fsebrokergw.service.GWPublishService;
 import it.unidoc.fse.fsebrokergw.service.GWStatusService;
 import it.unidoc.fse.fsebrokergw.service.GWValidationService;
 import it.unidoc.fse.fsebrokergw.service.TestService;
+import net.minidev.json.parser.JSONParser;
+import net.minidev.json.parser.ParseException;
 import okhttp3.*;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -38,6 +44,8 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.net.ssl.SSLContext;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
 import java.security.KeyManagementException;
@@ -52,9 +60,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-
-
 
 
 /**
@@ -102,6 +107,25 @@ public class TestFseBrokerGW {
     }
 
     @Test
+    public void getStatusTraceId() throws Exception {
+
+        String fileJson = getFileDataSign("CREATE");
+
+        JWTGenerator jwtGenerator = new JWTGenerator();
+        jwtGenerator.sign_generate(fileJson);
+
+
+        gwStatusService.setBearerToken(Launcher._jwt);
+        gwStatusService.setHashSignature(Launcher._sig);
+        gwStatusService.setYamlConfig(yamlConfig);
+
+
+        var transResponse = gwStatusService.getStatusTraceId("ef285db74658672e");
+
+
+    }
+
+    @Test
     public void test() throws Exception {
 
 
@@ -115,29 +139,27 @@ public class TestFseBrokerGW {
 
         MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
         headers.add("Content-Type", "application/json");
-        headers.add("Authorization", "Bearer "+yamlConfig.getJWT_PAYLOAD());
-        var entity = restTemplate.exchange(yamlConfig.getGWURLSERVICE()+"/v1/status/search/3f3ab67d9395af4", HttpMethod.GET, new HttpEntity<Object>(headers),
-              String.class);
+        headers.add("Authorization", "Bearer " + yamlConfig.getJWT_PAYLOAD());
+        var entity = restTemplate.exchange(yamlConfig.getGWURLSERVICE() + "/v1/status/search/3f3ab67d9395af4", HttpMethod.GET, new HttpEntity<Object>(headers),
+                String.class);
 
     }
 
     @Test
-    public void testPdf()
-    {
+    public void testPdf() {
         try {
 
-          TestService testService =  new TestService();
+            TestService testService = new TestService();
 
             testService.setBearerToken(yamlConfig.getJWT_PAYLOAD());
             testService.setHashSignature(yamlConfig.getJWT_WITH_HASH_PAYLOAD());
 
 
-           // String pdfFile = pathPdf + File.separator + yamlConfig.getPDF_LAB();
+            // String pdfFile = pathPdf + File.separator + yamlConfig.getPDF_LAB();
 
-               String pdfFile = "c:\\logs\\output.pdf";
+            String pdfFile = "c:\\logs\\output.pdf";
 
-            var response = testService.test(pdfFile,getHealthDataValidationAttachment(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
-
+            var response = testService.test(pdfFile, getHealthDataValidationAttachment(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
 
 
         } catch (KeyStoreException e) {
@@ -178,12 +200,19 @@ public class TestFseBrokerGW {
 
 
     @Test
-    public void validationAttachment_CERT_VACC_GW() throws JsonProcessingException {
+    public void validationAttachment_CERT_VACC_GW() throws Exception {
 
-        gwValidationService.setBearerToken(yamlConfig.getJWT_PAYLOAD());
-        gwValidationService.setHashSignature(yamlConfig.getJWT_WITH_HASH_PAYLOAD());
-        String pdfFile = pathPdf + File.separator + yamlConfig.getPDF_CERT_VACC();
 
+        String fileJson = getFileDataSign("CREATE");
+
+        String pdfFile = "C:\\logs\\sing_vacc.pdf";
+
+        JWTGenerator jwtGenerator = new JWTGenerator();
+        jwtGenerator.sign_generate_with_hash(fileJson, pdfFile);
+
+
+        gwValidationService.setBearerToken(Launcher._jwt);
+        gwValidationService.setHashSignature(Launcher._sig);
         gwValidationService.setYamlConfig(yamlConfig);
 
         var response = gwValidationService.validation(pdfFile, getHealthDataValidationAttachment(), org.springframework.http.MediaType.MULTIPART_FORM_DATA);
@@ -417,17 +446,76 @@ public class TestFseBrokerGW {
                 .build();
 
 
+        var response = client.newCall(request).execute();
 
-
-            var response = client.newCall(request).execute();
-
-            assertTrue(response.code() == 200 || response.code() == 201);
-
-
+        assertTrue(response.code() == 200 || response.code() == 201);
 
 
     }
 
+    /*
+    * {
+    "alg":"rs256",
+    "typ":"jwt",
+	"sub": "PROVAX00X00X000Y^^^&2.16.840.1.113883.2.9.4.3.2&ISO",
+	"subject_role": "AAS",
+	"purpose_of_use": "TREATMENT",
+	"iss": "S1#111CONSORZIOCSA",
+	"subject_application_id": "fsebroker",
+	"subject_application_vendor": "fsebroker",
+	"subject_application_version": "V.1.0.0",
+	"locality": "rome",
+	"subject_organization_id": "120",
+	"subject_organization": "Regione Lazio",
+	"aud" : "https://modipa-val.fse.salute.gov.it/govway/rest/in/FSE/gateway/v1",
+	"patient_consent": true,
+    "action_id": "CREATE",
+	"resource_hl7_type": "('87273-9^^2.16.840.1.113883.6.1')",
+	"jti": "3722467",
+	"person_id":"RSSMRA75C03F839K^^^&2.16.840.1.113883.2.9.4.3.2&ISO",
+	"pem_path": "C:/fse2/certificati/sign.pem",
+	"p12_path": "C:/fse2/certificati/sign.p12"
+}
+    * */
+
+   // @Test
+    public String getFileDataSign(String action_id) throws FileNotFoundException, ParseException {
+
+
+        JSONParser parser = new JSONParser();
+
+        Object obj = parser.parse(new FileReader("C:\\fse2\\certificati\\sign.json"));
+        Gson g = new Gson();
+
+        DataSign dataSign = g.fromJson(obj.toString(), DataSign.class);
+        dataSign.setJti(String.valueOf(getRandom()));
+        dataSign.setAction_id(action_id);
+        dataSign.setPerson_id("RSSMRA75C03F839K^^^&2.16.840.1.113883.2.9.4.3.2&ISO");
+        dataSign.setResource_hl7_type("('87273-9^^2.16.840.1.113883.6.1')");
+
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        var fileName = System.getProperty("java.io.tmpdir") + File.separator+ "sign.json";
+
+        if (new File(fileName).exists())
+            new File(fileName).delete();
+
+
+        try {
+            mapper.writeValue(new File(fileName), dataSign);
+            String jsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(dataSign);
+
+            System.out.println(jsonString);
+
+            return  fileName;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+
+    }
 
 
 }

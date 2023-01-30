@@ -1,8 +1,15 @@
 package it.finanze.sanita.fse2.ms.gtw.validator;
 
+import ch.qos.logback.classic.PatternLayout;
+import ch.qos.logback.core.FileAppender;
+import ch.qos.logback.core.rolling.RollingFileAppender;
 import it.finanze.sanita.fjm.*;
 import org.junit.Test;
 import org.junit.jupiter.api.DisplayName;
+
+import java.io.FileOutputStream;
+import java.io.PrintStream;
+import java.util.logging.Logger;
 
 public class JWTGenerator {
 
@@ -19,6 +26,8 @@ public class JWTGenerator {
         String[] args = {"-d", jsonFile, "-a", user, "-p", pwd, "-t", "100000", "-v"};
 
         Launcher.main(args);
+
+
     }
 
     @Test
@@ -37,6 +46,8 @@ public class JWTGenerator {
     }
 
 
+
+
     @Test
     @DisplayName("sign generate")
     public void sign_generate_with_hash() throws Exception {
@@ -51,7 +62,41 @@ public class JWTGenerator {
         String[] args = {"-d", jsonFile, "-a", user, "-p", pwd, "-t", "100000", "-v","-f",pdfFile };
 
         Launcher.main(args);
+
+
     }
+
+
+    public void sign_generate_with_hash(  String jsonFile,String pdfFile) throws Exception {
+
+        //-d C:/fse2/certificati/sign.json -a sign -p csa -t 100000 -v
+
+        String user = "sign";
+        String pwd = "csa";
+        //String pdfFile="C:\\logs\\sing_vacc.pdf";
+
+        String[] args = {"-d", jsonFile, "-a", user, "-p", pwd, "-t", "100000", "-v","-f",pdfFile };
+
+        Launcher.main(args);
+
+
+    }
+
+    public void sign_generate(  String jsonFile) throws Exception {
+
+        //-d C:/fse2/certificati/sign.json -a sign -p csa -t 100000 -v
+
+        String user = "sign";
+        String pwd = "csa";
+        //String pdfFile="C:\\logs\\sing_vacc.pdf";
+
+        String[] args = {"-d", jsonFile, "-a", user, "-p", pwd, "-t", "100000", "-v" };
+
+        Launcher.main(args);
+
+
+    }
+
 
 
     /**
