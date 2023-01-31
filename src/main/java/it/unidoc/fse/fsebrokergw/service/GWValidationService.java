@@ -71,6 +71,9 @@ public class GWValidationService extends GWBaseService {
             headers.add("Authorization","Bearer "+ getBearerToken());
             headers.add("FSE-JWT-Signature", getHashSignatureGW());
             headers.add("Accept", "application/json");
+            headers.add("Content-Type", "multipart/form-data");
+
+
 
 
             MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();

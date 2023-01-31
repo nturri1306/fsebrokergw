@@ -210,7 +210,6 @@ public class TestFseBrokerGW {
         JWTGenerator jwtGenerator = new JWTGenerator();
         jwtGenerator.sign_generate_with_hash(fileJson, pdfFile);
 
-
         gwValidationService.setBearerToken(Launcher._jwt);
         gwValidationService.setHashSignature(Launcher._sig);
         gwValidationService.setYamlConfig(yamlConfig);
